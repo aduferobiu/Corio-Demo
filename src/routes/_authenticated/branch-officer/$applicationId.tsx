@@ -17,9 +17,11 @@ import {
   postQueryMessageFn,
   uploadBankStatementFn,
 } from '#/lib/loans/loans.functions'
+import { queryThreadSearchValidator } from '#/lib/loans/query-search'
 import { markQueryNotificationsReadFn } from '#/lib/notifications/notifications.functions'
 
 export const Route = createFileRoute('/_authenticated/branch-officer/$applicationId')({
+  validateSearch: queryThreadSearchValidator,
   loader: ({ params }) => getApplicationFn({ data: { id: params.applicationId } }),
   component: BranchOfficerApplicationDetail,
 })
@@ -28,6 +30,7 @@ function BranchOfficerApplicationDetail() {
   const data = Route.useLoaderData()
   const { user } = Route.useRouteContext()
   const { applicationId } = Route.useParams()
+  const search = Route.useSearch()
   const navigate = useNavigate()
   const router = useRouter()
 
@@ -67,6 +70,7 @@ function BranchOfficerApplicationDetail() {
           }}
           bankStatementReportHref={`/branch-officer/${applicationId}/bank-statement`}
           bankAnalysisRunAt={data.application.bankAnalysisRunAt}
+          openQueryOnMount={search.openQuery === true}
           onRunBankAnalysis={() => navigate({ to: '/branch-officer/$applicationId/analyze', params: { applicationId } })}
           onUploadBankStatement={async (file) => {
             const formData = new FormData()

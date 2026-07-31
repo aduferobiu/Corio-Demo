@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { ChevronRight, FileText, History, Plus, Trash2 } from 'lucide-react'
 
@@ -84,6 +84,7 @@ export function ApplicationDetailView({
   auditTrail,
   hasUnreadQuery,
   onOpenQueryThread,
+  openQueryOnMount,
 }: {
   application: ApplicationRow
   comments: ThreadComment[]
@@ -100,10 +101,19 @@ export function ApplicationDetailView({
   auditTrail?: AuditEntry[]
   hasUnreadQuery?: boolean
   onOpenQueryThread?: () => void
+  // Set when arriving from a query notification, so the thread panel opens
+  // immediately instead of making the user find and click "View Query".
+  openQueryOnMount?: boolean
 }) {
-  const [queryOpen, setQueryOpen] = useState(false)
+  const [queryOpen, setQueryOpen] = useState(Boolean(openQueryOnMount))
   const [uploadStatementOpen, setUploadStatementOpen] = useState(false)
   const [auditTrailOpen, setAuditTrailOpen] = useState(false)
+
+  useEffect(() => {
+    if (openQueryOnMount) onOpenQueryThread?.()
+    // Only ever fire on mount for the arrival that requested it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const bankStatementDocs = documents.filter((d) => d.documentType === 'Bank Statement')
   // Once the branch officer has made a decision (or analysis has run), the bank

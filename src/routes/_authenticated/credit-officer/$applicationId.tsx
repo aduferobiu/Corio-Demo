@@ -11,9 +11,11 @@ import { Button } from '#/components/ui/button'
 import { usePoll } from '#/lib/hooks/use-poll'
 import { analyzeBankStatement } from '#/lib/loans/bank-analysis'
 import { approveByCreditFn, getApplicationFn, postQueryMessageFn, rejectByCreditFn } from '#/lib/loans/loans.functions'
+import { queryThreadSearchValidator } from '#/lib/loans/query-search'
 import { markQueryNotificationsReadFn } from '#/lib/notifications/notifications.functions'
 
 export const Route = createFileRoute('/_authenticated/credit-officer/$applicationId')({
+  validateSearch: queryThreadSearchValidator,
   loader: ({ params }) => getApplicationFn({ data: { id: params.applicationId } }),
   component: CreditOfficerApplicationDetail,
 })
@@ -22,6 +24,7 @@ function CreditOfficerApplicationDetail() {
   const data = Route.useLoaderData()
   const { user } = Route.useRouteContext()
   const { applicationId } = Route.useParams()
+  const search = Route.useSearch()
   const navigate = useNavigate()
   const router = useRouter()
 
@@ -59,6 +62,7 @@ function CreditOfficerApplicationDetail() {
             await router.invalidate()
           }}
           bankStatementReportHref={`/credit-officer/${applicationId}/bank-statement`}
+          openQueryOnMount={search.openQuery === true}
           hasUnreadQuery={data.hasUnreadQuery}
           onOpenQueryThread={async () => {
             if (!data.hasUnreadQuery) return

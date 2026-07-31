@@ -42,7 +42,9 @@ export function NotificationBell() {
       setItems((prev) => prev.map((n) => (n.id === notification.id ? { ...n, read: true } : n)))
     }
     setOpen(false)
-    if (notification.link) navigate({ to: notification.link })
+    if (!notification.link) return
+    const openQuery = notification.type === 'query_raised' || notification.type === 'query_response'
+    navigate({ to: notification.link, search: openQuery ? { openQuery: true } : undefined })
   }
 
   return (

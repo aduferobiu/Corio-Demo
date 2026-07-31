@@ -52,7 +52,9 @@ export function NotificationWatcher() {
             className="flex min-w-0 flex-1 cursor-pointer flex-col gap-0.5"
             onClick={() => {
               toast.dismiss(id)
-              if (n.link) navigate({ to: n.link })
+              if (!n.link) return
+              const openQuery = n.type === 'query_raised' || n.type === 'query_response'
+              navigate({ to: n.link, search: openQuery ? { openQuery: true } : undefined })
             }}
           >
             <p className="text-sm font-medium text-[var(--corio-neutral-800)]">{n.title}</p>

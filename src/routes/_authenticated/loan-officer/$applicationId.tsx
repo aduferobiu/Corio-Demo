@@ -6,9 +6,11 @@ import { ApplicationDetailView } from '#/components/loans/application-detail'
 import { Sidebar } from '#/components/loans/sidebar'
 import { usePoll } from '#/lib/hooks/use-poll'
 import { getApplicationFn, postQueryMessageFn } from '#/lib/loans/loans.functions'
+import { queryThreadSearchValidator } from '#/lib/loans/query-search'
 import { markQueryNotificationsReadFn } from '#/lib/notifications/notifications.functions'
 
 export const Route = createFileRoute('/_authenticated/loan-officer/$applicationId')({
+  validateSearch: queryThreadSearchValidator,
   loader: ({ params }) => getApplicationFn({ data: { id: params.applicationId } }),
   component: LoanOfficerApplicationDetail,
 })
@@ -17,6 +19,7 @@ function LoanOfficerApplicationDetail() {
   const data = Route.useLoaderData()
   const { user } = Route.useRouteContext()
   const { applicationId } = Route.useParams()
+  const search = Route.useSearch()
   const navigate = useNavigate()
   const router = useRouter()
   const postQueryMessage = useServerFn(postQueryMessageFn)
@@ -45,6 +48,7 @@ function LoanOfficerApplicationDetail() {
             await router.invalidate()
           }}
           bankStatementReportHref={`/loan-officer/${applicationId}/bank-statement`}
+          openQueryOnMount={search.openQuery === true}
           hasUnreadQuery={data.hasUnreadQuery}
           onOpenQueryThread={async () => {
             if (!data.hasUnreadQuery) return
