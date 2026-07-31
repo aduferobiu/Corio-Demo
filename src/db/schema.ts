@@ -1,5 +1,4 @@
-import { sql } from 'drizzle-orm'
-import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import { index, integer, pgTable, text, timestamp } from 'drizzle-orm/pg-core'
 
 const id = () =>
   text('id')
@@ -7,15 +6,11 @@ const id = () =>
     .$defaultFn(() => crypto.randomUUID())
 
 const timestamps = {
-  createdAt: integer('created_at', { mode: 'timestamp' })
-    .notNull()
-    .default(sql`(unixepoch())`),
-  updatedAt: integer('updated_at', { mode: 'timestamp' })
-    .notNull()
-    .default(sql`(unixepoch())`),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
 }
 
-export const users = sqliteTable('users', {
+export const users = pgTable('users', {
   id: id(),
   name: text('name').notNull(),
   email: text('email').notNull().unique(),
@@ -26,11 +21,11 @@ export const users = sqliteTable('users', {
   branch: text('branch'),
   avatarUrl: text('avatar_url'),
   status: text('status', { enum: ['active', 'pending'] }).notNull().default('active'),
-  lastActivityAt: integer('last_activity_at', { mode: 'timestamp' }),
+  lastActivityAt: timestamp('last_activity_at'),
   ...timestamps,
 })
 
-export const roles = sqliteTable('roles', {
+export const roles = pgTable('roles', {
   id: id(),
   name: text('name').notNull(),
   // JSON-stringified array of permission keys, e.g. ["customers.view", "loans.approve"]
@@ -41,22 +36,20 @@ export const roles = sqliteTable('roles', {
   ...timestamps,
 })
 
-export const sessions = sqliteTable(
+export const sessions = pgTable(
   'sessions',
   {
     id: text('id').primaryKey(),
     userId: text('user_id')
       .notNull()
       .references(() => users.id),
-    expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
-    createdAt: integer('created_at', { mode: 'timestamp' })
-      .notNull()
-      .default(sql`(unixepoch())`),
+    expiresAt: timestamp('expires_at').notNull(),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
   },
   (table) => [index('sessions_user_id_idx').on(table.userId)],
 )
 
-export const customers = sqliteTable(
+export const customers = pgTable(
   'customers',
   {
     id: id(),
@@ -80,7 +73,7 @@ export const customers = sqliteTable(
   (table) => [index('customers_phone_idx').on(table.phoneNumber)],
 )
 
-export const loanApplications = sqliteTable(
+export const loanApplications = pgTable(
   'loan_applications',
   {
     id: id(),
@@ -130,10 +123,10 @@ export const loanApplications = sqliteTable(
 
     // Set once the branch officer has run the illustrative bank statement
     // analysis for this application; gates the "Run Analysis" vs "View Report" button.
-    bankAnalysisRunAt: integer('bank_analysis_run_at', { mode: 'timestamp' }),
+    bankAnalysisRunAt: timestamp('bank_analysis_run_at'),
 
-    submittedAt: integer('submitted_at', { mode: 'timestamp' }),
-    decidedAt: integer('decided_at', { mode: 'timestamp' }),
+    submittedAt: timestamp('submitted_at'),
+    decidedAt: timestamp('decided_at'),
     ...timestamps,
   },
   (table) => [
@@ -143,7 +136,7 @@ export const loanApplications = sqliteTable(
   ],
 )
 
-export const loanStatusHistory = sqliteTable(
+export const loanStatusHistory = pgTable(
   'loan_status_history',
   {
     id: id(),
@@ -156,14 +149,12 @@ export const loanStatusHistory = sqliteTable(
       .notNull()
       .references(() => users.id),
     note: text('note'),
-    createdAt: integer('created_at', { mode: 'timestamp' })
-      .notNull()
-      .default(sql`(unixepoch())`),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
   },
   (table) => [index('loan_status_history_application_idx').on(table.loanApplicationId)],
 )
 
-export const comments = sqliteTable(
+export const comments = pgTable(
   'comments',
   {
     id: id(),
@@ -177,14 +168,12 @@ export const comments = sqliteTable(
       .notNull()
       .default('note'),
     body: text('body').notNull(),
-    createdAt: integer('created_at', { mode: 'timestamp' })
-      .notNull()
-      .default(sql`(unixepoch())`),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
   },
   (table) => [index('comments_application_idx').on(table.loanApplicationId)],
 )
 
-export const documents = sqliteTable(
+export const documents = pgTable(
   'documents',
   {
     id: id(),
@@ -205,16 +194,14 @@ export const documents = sqliteTable(
     mimeType: text('mime_type').notNull(),
     fileSize: integer('file_size').notNull(),
     documentType: text('document_type').notNull().default('other'),
-    createdAt: integer('created_at', { mode: 'timestamp' })
-      .notNull()
-      .default(sql`(unixepoch())`),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
   },
   (table) => [index('documents_application_idx').on(table.loanApplicationId), index('documents_comment_idx').on(table.commentId)],
 )
 
 // General company document repository (distinct from the per-application `documents`
 // table above) — supports folders, versioning and an admin approval workflow.
-export const companyDocuments = sqliteTable(
+export const companyDocuments = pgTable(
   'company_documents',
   {
     id: id(),
@@ -237,7 +224,7 @@ export const companyDocuments = sqliteTable(
   (table) => [index('company_documents_status_idx').on(table.status), index('company_documents_folder_idx').on(table.folder)],
 )
 
-export const companyDocumentVersions = sqliteTable(
+export const companyDocumentVersions = pgTable(
   'company_document_versions',
   {
     id: id(),
@@ -253,14 +240,12 @@ export const companyDocumentVersions = sqliteTable(
     uploadedByUserId: text('uploaded_by_user_id')
       .notNull()
       .references(() => users.id),
-    createdAt: integer('created_at', { mode: 'timestamp' })
-      .notNull()
-      .default(sql`(unixepoch())`),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
   },
   (table) => [index('company_document_versions_document_idx').on(table.documentId)],
 )
 
-export const companyDocumentActivity = sqliteTable(
+export const companyDocumentActivity = pgTable(
   'company_document_activity',
   {
     id: id(),
@@ -274,9 +259,7 @@ export const companyDocumentActivity = sqliteTable(
       enum: ['created', 'uploaded_version', 'approved', 'rejected'],
     }).notNull(),
     detail: text('detail'),
-    createdAt: integer('created_at', { mode: 'timestamp' })
-      .notNull()
-      .default(sql`(unixepoch())`),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
   },
   (table) => [index('company_document_activity_document_idx').on(table.documentId)],
 )
