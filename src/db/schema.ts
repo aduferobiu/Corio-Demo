@@ -1,4 +1,4 @@
-import { index, integer, pgTable, text, timestamp } from 'drizzle-orm/pg-core'
+import { boolean, index, integer, pgTable, text, timestamp } from 'drizzle-orm/pg-core'
 
 const id = () =>
   text('id')
@@ -262,4 +262,25 @@ export const companyDocumentActivity = pgTable(
     createdAt: timestamp('created_at').notNull().defaultNow(),
   },
   (table) => [index('company_document_activity_document_idx').on(table.documentId)],
+)
+
+// In-app notifications shown from the header bell. `link` is an app-relative path the
+// notification navigates to when clicked (e.g. a loan application or document detail).
+export const notifications = pgTable(
+  'notifications',
+  {
+    id: id(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id),
+    type: text('type', {
+      enum: ['query_raised', 'query_response', 'document_upload_request', 'document_decision', 'loan_activity'],
+    }).notNull(),
+    title: text('title').notNull(),
+    body: text('body').notNull(),
+    link: text('link'),
+    read: boolean('read').notNull().default(false),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  (table) => [index('notifications_user_idx').on(table.userId), index('notifications_user_read_idx').on(table.userId, table.read)],
 )

@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs'
 
 import { db } from './client'
-import { comments, customers, documents, loanApplications, users } from './schema'
+import { comments, companyDocumentActivity, companyDocumentVersions, companyDocuments, customers, documents, loanApplications, users } from './schema'
 
 const DEMO_PASSWORDS = {
   loan_officer: '12345',
@@ -9,6 +9,16 @@ const DEMO_PASSWORDS = {
   credit_officer: '12345',
   md: '12345',
 } as const
+
+// Minimal, valid single-page PDFs generated for this demo — not real documents.
+// Reused as the attachment content across loan documents, bank statements, and
+// company documents so every preview has something real to render.
+const NATIONAL_ID_PDF =
+  'data:application/pdf;base64,JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvUmVzb3VyY2VzIDw8IC9Gb250IDw8IC9GMSA0IDAgUiA+PiA+PiAvTWVkaWFCb3ggWzAgMCA2MTIgNzkyXSAvQ29udGVudHMgNSAwIFIgPj4KZW5kb2JqCjQgMCBvYmoKPDwgL1R5cGUgL0ZvbnQgL1N1YnR5cGUgL1R5cGUxIC9CYXNlRm9udCAvSGVsdmV0aWNhID4+CmVuZG9iago1IDAgb2JqCjw8IC9MZW5ndGggMjQ0ID4+CnN0cmVhbQpCVCAvRjEgMjAgVGYgNzIgNzAwIFRkIChOQVRJT05BTCBJREVOVElGSUNBVElPTikgVGogRVQKQlQgL0YxIDEyIFRmIDcyIDY2MCBUZCAoRmVkZXJhbCBSZXB1YmxpYyBvZiBOaWdlcmlhKSBUaiBFVApCVCAvRjEgMTIgVGYgNzIgNjM4IFRkIChTYW1wbGUgZG9jdW1lbnQgZm9yIGRlbW8gcHVycG9zZXMpIFRqIEVUCkJUIC9GMSAxMiBUZiA3MiA2MTYgVGQgKE5vdCBhIHJlYWwgaWRlbnRpZmljYXRpb24gZG9jdW1lbnQpIFRqIEVUCmVuZHN0cmVhbQplbmRvYmoKeHJlZgowIDYKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDA5IDAwMDAwIG4gCjAwMDAwMDAwNTggMDAwMDAgbiAKMDAwMDAwMDExNSAwMDAwMCBuIAowMDAwMDAwMjQxIDAwMDAwIG4gCjAwMDAwMDAzMTEgMDAwMDAgbiAKdHJhaWxlcgo8PCAvU2l6ZSA2IC9Sb290IDEgMCBSID4+CnN0YXJ0eHJlZgo2MDYKJSVFT0Y='
+const BANK_STATEMENT_PDF =
+  'data:application/pdf;base64,JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvUmVzb3VyY2VzIDw8IC9Gb250IDw8IC9GMSA0IDAgUiA+PiA+PiAvTWVkaWFCb3ggWzAgMCA2MTIgNzkyXSAvQ29udGVudHMgNSAwIFIgPj4KZW5kb2JqCjQgMCBvYmoKPDwgL1R5cGUgL0ZvbnQgL1N1YnR5cGUgL1R5cGUxIC9CYXNlRm9udCAvSGVsdmV0aWNhID4+CmVuZG9iago1IDAgb2JqCjw8IC9MZW5ndGggMjMwID4+CnN0cmVhbQpCVCAvRjEgMjAgVGYgNzIgNzAwIFRkIChCQU5LIFNUQVRFTUVOVCkgVGogRVQKQlQgL0YxIDEyIFRmIDcyIDY2MCBUZCAoU3RhdGVtZW50IHBlcmlvZDogbGFzdCAzIG1vbnRocykgVGogRVQKQlQgL0YxIDEyIFRmIDcyIDYzOCBUZCAoU2FtcGxlIGRvY3VtZW50IGZvciBkZW1vIHB1cnBvc2VzKSBUaiBFVApCVCAvRjEgMTIgVGYgNzIgNjE2IFRkIChOb3QgYSByZWFsIGJhbmsgc3RhdGVtZW50KSBUaiBFVAplbmRzdHJlYW0KZW5kb2JqCnhyZWYKMCA2CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAwOSAwMDAwMCBuIAowMDAwMDAwMDU4IDAwMDAwIG4gCjAwMDAwMDAxMTUgMDAwMDAgbiAKMDAwMDAwMDI0MSAwMDAwMCBuIAowMDAwMDAwMzExIDAwMDAwIG4gCnRyYWlsZXIKPDwgL1NpemUgNiAvUm9vdCAxIDAgUiA+PgpzdGFydHhyZWYKNTkyCiUlRU9G'
+const COMPANY_DOC_PDF =
+  'data:application/pdf;base64,JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvUmVzb3VyY2VzIDw8IC9Gb250IDw8IC9GMSA0IDAgUiA+PiA+PiAvTWVkaWFCb3ggWzAgMCA2MTIgNzkyXSAvQ29udGVudHMgNSAwIFIgPj4KZW5kb2JqCjQgMCBvYmoKPDwgL1R5cGUgL0ZvbnQgL1N1YnR5cGUgL1R5cGUxIC9CYXNlRm9udCAvSGVsdmV0aWNhID4+CmVuZG9iago1IDAgb2JqCjw8IC9MZW5ndGggMTY3ID4+CnN0cmVhbQpCVCAvRjEgMjAgVGYgNzIgNzAwIFRkIChDT01QQU5ZIERPQ1VNRU5UKSBUaiBFVApCVCAvRjEgMTIgVGYgNzIgNjYwIFRkIChDb3JpbyBNaWNyb2ZpbmFuY2UgQmFuaykgVGogRVQKQlQgL0YxIDEyIFRmIDcyIDYzOCBUZCAoU2FtcGxlIGRvY3VtZW50IGZvciBkZW1vIHB1cnBvc2VzKSBUaiBFVAplbmRzdHJlYW0KZW5kb2JqCnhyZWYKMCA2CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAwOSAwMDAwMCBuIAowMDAwMDAwMDU4IDAwMDAwIG4gCjAwMDAwMDAxMTUgMDAwMDAgbiAKMDAwMDAwMDI0MSAwMDAwMCBuIAowMDAwMDAwMzExIDAwMDAwIG4gCnRyYWlsZXIKPDwgL1NpemUgNiAvUm9vdCAxIDAgUiA+PgpzdGFydHhyZWYKNTI5CiUlRU9G'
 
 async function seed() {
   const [loanOfficerHash, branchOfficerHash, creditOfficerHash, mdHash] = await Promise.all([
@@ -380,26 +390,79 @@ I'll chase the updated statement and get back to you as soon as I have it.`,
     },
   ])
 
-  await db.insert(documents).values([
-    {
-      loanApplicationId: appWithCredit.id,
-      uploadedByUserId: loanOfficer.id,
-      fileName: 'Bank_Statement_Chukwuemeka_Eze_3M.pdf',
-      storedPath: 'seed/bank_statement_analysis.pdf',
+  // Every application gets a National ID attachment and a bank statement, so every
+  // detail view and preview has real (if generated) content instead of empty states.
+  const applicationDocs = [
+    { app: appSubmitted, name: 'Bisi_Adeyemi' },
+    { app: appQueried, name: 'Segun_Balogun' },
+    { app: appWithCredit, name: 'Chukwuemeka_Eze' },
+    { app: appApproved, name: 'Fatima_Suleiman' },
+    { app: appWithCredit2, name: 'Yusuf_Ibrahim' },
+    { app: appRejected, name: 'Ngozi_Obi' },
+    { app: appDeclined, name: 'Ibrahim_Musa' },
+    { app: appSubmitted2, name: 'Chiamaka_Eze' },
+  ]
+
+  await db.insert(documents).values(
+    applicationDocs.flatMap(({ app, name }) => [
+      {
+        loanApplicationId: app.id,
+        uploadedByUserId: loanOfficer.id,
+        fileName: `National_ID_${name}.pdf`,
+        storedPath: `seed/national_id_${name}.pdf`,
+        dataUrl: NATIONAL_ID_PDF,
+        mimeType: 'application/pdf',
+        fileSize: 12_400,
+        documentType: 'National ID',
+      },
+      {
+        loanApplicationId: app.id,
+        uploadedByUserId: loanOfficer.id,
+        fileName: `Bank_Statement_${name}_3M.pdf`,
+        storedPath: `seed/bank_statement_${name}.pdf`,
+        dataUrl: BANK_STATEMENT_PDF,
+        mimeType: 'application/pdf',
+        fileSize: 204_800,
+        documentType: 'Bank Statement',
+      },
+    ]),
+  )
+
+  const [staffHandbook, loanPolicy, complianceChecklist] = await db
+    .insert(companyDocuments)
+    .values([
+      { name: 'Staff Handbook 2026', folder: 'hr', ownerUserId: md.id, status: 'approved', approvedByUserId: md.id },
+      { name: 'Loan Policy Manual', folder: 'loans', ownerUserId: creditOfficer.id, status: 'approved', approvedByUserId: md.id },
+      { name: 'Branch Compliance Checklist', folder: 'compliance', ownerUserId: branchOfficer.id, status: 'pending' },
+    ])
+    .returning()
+
+  const companyDocs = [
+    { doc: staffHandbook, fileName: 'Staff_Handbook_2026.pdf', uploadedBy: md.id },
+    { doc: loanPolicy, fileName: 'Loan_Policy_Manual.pdf', uploadedBy: creditOfficer.id },
+    { doc: complianceChecklist, fileName: 'Branch_Compliance_Checklist.pdf', uploadedBy: branchOfficer.id },
+  ]
+
+  await db.insert(companyDocumentVersions).values(
+    companyDocs.map(({ doc, fileName, uploadedBy }) => ({
+      documentId: doc.id,
+      version: 1,
+      fileName,
+      storedPath: `seed/${fileName}`,
+      dataUrl: COMPANY_DOC_PDF,
       mimeType: 'application/pdf',
-      fileSize: 204_800,
-      documentType: 'Bank Statement',
-    },
-    {
-      loanApplicationId: appWithCredit2.id,
-      uploadedByUserId: loanOfficer.id,
-      fileName: 'Bank_Statement_Yusuf_Ibrahim_3M.pdf',
-      storedPath: 'seed/bank_statement_yusuf.pdf',
-      mimeType: 'application/pdf',
-      fileSize: 187_400,
-      documentType: 'Bank Statement',
-    },
-  ])
+      fileSize: 98_300,
+      uploadedByUserId: uploadedBy,
+    })),
+  )
+
+  await db.insert(companyDocumentActivity).values(
+    companyDocs.map(({ doc, uploadedBy }) => ({
+      documentId: doc.id,
+      actorUserId: uploadedBy,
+      action: 'created' as const,
+    })),
+  )
 
   console.log('Seeded users and passwords:', {
     loanOfficer: { email: loanOfficer.email, password: DEMO_PASSWORDS.loan_officer },

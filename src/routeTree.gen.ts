@@ -31,10 +31,12 @@ import { Route as AuthenticatedLoanOfficerApplicationIdRouteImport } from './rou
 import { Route as AuthenticatedLoanOfficerDashboardRouteImport } from './routes/_authenticated/loan-officer/dashboard'
 import { Route as AuthenticatedLoanOfficerNewRouteImport } from './routes/_authenticated/loan-officer/new'
 import { Route as AuthenticatedMdIndexRouteImport } from './routes/_authenticated/md/index'
+import { Route as AuthenticatedMdApplicationIdRouteImport } from './routes/_authenticated/md/$applicationId'
 import { Route as AuthenticatedBranchOfficerApplicationIdAnalyzeRouteImport } from './routes/_authenticated/branch-officer/$applicationId_.analyze'
 import { Route as AuthenticatedBranchOfficerApplicationIdBankStatementRouteImport } from './routes/_authenticated/branch-officer/$applicationId_.bank-statement'
 import { Route as AuthenticatedCreditOfficerApplicationIdBankStatementRouteImport } from './routes/_authenticated/credit-officer/$applicationId_.bank-statement'
 import { Route as AuthenticatedLoanOfficerApplicationIdBankStatementRouteImport } from './routes/_authenticated/loan-officer/$applicationId_.bank-statement'
+import { Route as AuthenticatedMdApplicationIdBankStatementRouteImport } from './routes/_authenticated/md/$applicationId_.bank-statement'
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
@@ -159,6 +161,12 @@ const AuthenticatedMdIndexRoute = AuthenticatedMdIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedMdRoute,
 } as any)
+const AuthenticatedMdApplicationIdRoute =
+  AuthenticatedMdApplicationIdRouteImport.update({
+    id: '/$applicationId',
+    path: '/$applicationId',
+    getParentRoute: () => AuthenticatedMdRoute,
+  } as any)
 const AuthenticatedBranchOfficerApplicationIdAnalyzeRoute =
   AuthenticatedBranchOfficerApplicationIdAnalyzeRouteImport.update({
     id: '/$applicationId_/analyze',
@@ -183,6 +191,12 @@ const AuthenticatedLoanOfficerApplicationIdBankStatementRoute =
     path: '/$applicationId/bank-statement',
     getParentRoute: () => AuthenticatedLoanOfficerRoute,
   } as any)
+const AuthenticatedMdApplicationIdBankStatementRoute =
+  AuthenticatedMdApplicationIdBankStatementRouteImport.update({
+    id: '/$applicationId_/bank-statement',
+    path: '/$applicationId/bank-statement',
+    getParentRoute: () => AuthenticatedMdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
@@ -201,6 +215,7 @@ export interface FileRoutesByFullPath {
   '/loan-officer/$applicationId': typeof AuthenticatedLoanOfficerApplicationIdRoute
   '/loan-officer/dashboard': typeof AuthenticatedLoanOfficerDashboardRoute
   '/loan-officer/new': typeof AuthenticatedLoanOfficerNewRoute
+  '/md/$applicationId': typeof AuthenticatedMdApplicationIdRoute
   '/branch-officer/': typeof AuthenticatedBranchOfficerIndexRoute
   '/credit-officer/': typeof AuthenticatedCreditOfficerIndexRoute
   '/customers/': typeof AuthenticatedCustomersIndexRoute
@@ -210,6 +225,7 @@ export interface FileRoutesByFullPath {
   '/branch-officer/$applicationId/bank-statement': typeof AuthenticatedBranchOfficerApplicationIdBankStatementRoute
   '/credit-officer/$applicationId/bank-statement': typeof AuthenticatedCreditOfficerApplicationIdBankStatementRoute
   '/loan-officer/$applicationId/bank-statement': typeof AuthenticatedLoanOfficerApplicationIdBankStatementRoute
+  '/md/$applicationId/bank-statement': typeof AuthenticatedMdApplicationIdBankStatementRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
@@ -224,6 +240,7 @@ export interface FileRoutesByTo {
   '/loan-officer/$applicationId': typeof AuthenticatedLoanOfficerApplicationIdRoute
   '/loan-officer/dashboard': typeof AuthenticatedLoanOfficerDashboardRoute
   '/loan-officer/new': typeof AuthenticatedLoanOfficerNewRoute
+  '/md/$applicationId': typeof AuthenticatedMdApplicationIdRoute
   '/branch-officer': typeof AuthenticatedBranchOfficerIndexRoute
   '/credit-officer': typeof AuthenticatedCreditOfficerIndexRoute
   '/customers': typeof AuthenticatedCustomersIndexRoute
@@ -233,6 +250,7 @@ export interface FileRoutesByTo {
   '/branch-officer/$applicationId/bank-statement': typeof AuthenticatedBranchOfficerApplicationIdBankStatementRoute
   '/credit-officer/$applicationId/bank-statement': typeof AuthenticatedCreditOfficerApplicationIdBankStatementRoute
   '/loan-officer/$applicationId/bank-statement': typeof AuthenticatedLoanOfficerApplicationIdBankStatementRoute
+  '/md/$applicationId/bank-statement': typeof AuthenticatedMdApplicationIdBankStatementRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -253,6 +271,7 @@ export interface FileRoutesById {
   '/_authenticated/loan-officer/$applicationId': typeof AuthenticatedLoanOfficerApplicationIdRoute
   '/_authenticated/loan-officer/dashboard': typeof AuthenticatedLoanOfficerDashboardRoute
   '/_authenticated/loan-officer/new': typeof AuthenticatedLoanOfficerNewRoute
+  '/_authenticated/md/$applicationId': typeof AuthenticatedMdApplicationIdRoute
   '/_authenticated/branch-officer/': typeof AuthenticatedBranchOfficerIndexRoute
   '/_authenticated/credit-officer/': typeof AuthenticatedCreditOfficerIndexRoute
   '/_authenticated/customers/': typeof AuthenticatedCustomersIndexRoute
@@ -262,6 +281,7 @@ export interface FileRoutesById {
   '/_authenticated/branch-officer/$applicationId_/bank-statement': typeof AuthenticatedBranchOfficerApplicationIdBankStatementRoute
   '/_authenticated/credit-officer/$applicationId_/bank-statement': typeof AuthenticatedCreditOfficerApplicationIdBankStatementRoute
   '/_authenticated/loan-officer/$applicationId_/bank-statement': typeof AuthenticatedLoanOfficerApplicationIdBankStatementRoute
+  '/_authenticated/md/$applicationId_/bank-statement': typeof AuthenticatedMdApplicationIdBankStatementRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -282,6 +302,7 @@ export interface FileRouteTypes {
     | '/loan-officer/$applicationId'
     | '/loan-officer/dashboard'
     | '/loan-officer/new'
+    | '/md/$applicationId'
     | '/branch-officer/'
     | '/credit-officer/'
     | '/customers/'
@@ -291,6 +312,7 @@ export interface FileRouteTypes {
     | '/branch-officer/$applicationId/bank-statement'
     | '/credit-officer/$applicationId/bank-statement'
     | '/loan-officer/$applicationId/bank-statement'
+    | '/md/$applicationId/bank-statement'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
@@ -305,6 +327,7 @@ export interface FileRouteTypes {
     | '/loan-officer/$applicationId'
     | '/loan-officer/dashboard'
     | '/loan-officer/new'
+    | '/md/$applicationId'
     | '/branch-officer'
     | '/credit-officer'
     | '/customers'
@@ -314,6 +337,7 @@ export interface FileRouteTypes {
     | '/branch-officer/$applicationId/bank-statement'
     | '/credit-officer/$applicationId/bank-statement'
     | '/loan-officer/$applicationId/bank-statement'
+    | '/md/$applicationId/bank-statement'
   id:
     | '__root__'
     | '/_authenticated'
@@ -333,6 +357,7 @@ export interface FileRouteTypes {
     | '/_authenticated/loan-officer/$applicationId'
     | '/_authenticated/loan-officer/dashboard'
     | '/_authenticated/loan-officer/new'
+    | '/_authenticated/md/$applicationId'
     | '/_authenticated/branch-officer/'
     | '/_authenticated/credit-officer/'
     | '/_authenticated/customers/'
@@ -342,6 +367,7 @@ export interface FileRouteTypes {
     | '/_authenticated/branch-officer/$applicationId_/bank-statement'
     | '/_authenticated/credit-officer/$applicationId_/bank-statement'
     | '/_authenticated/loan-officer/$applicationId_/bank-statement'
+    | '/_authenticated/md/$applicationId_/bank-statement'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -505,6 +531,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMdIndexRouteImport
       parentRoute: typeof AuthenticatedMdRoute
     }
+    '/_authenticated/md/$applicationId': {
+      id: '/_authenticated/md/$applicationId'
+      path: '/$applicationId'
+      fullPath: '/md/$applicationId'
+      preLoaderRoute: typeof AuthenticatedMdApplicationIdRouteImport
+      parentRoute: typeof AuthenticatedMdRoute
+    }
     '/_authenticated/branch-officer/$applicationId_/analyze': {
       id: '/_authenticated/branch-officer/$applicationId_/analyze'
       path: '/$applicationId/analyze'
@@ -532,6 +565,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/loan-officer/$applicationId/bank-statement'
       preLoaderRoute: typeof AuthenticatedLoanOfficerApplicationIdBankStatementRouteImport
       parentRoute: typeof AuthenticatedLoanOfficerRoute
+    }
+    '/_authenticated/md/$applicationId_/bank-statement': {
+      id: '/_authenticated/md/$applicationId_/bank-statement'
+      path: '/$applicationId/bank-statement'
+      fullPath: '/md/$applicationId/bank-statement'
+      preLoaderRoute: typeof AuthenticatedMdApplicationIdBankStatementRouteImport
+      parentRoute: typeof AuthenticatedMdRoute
     }
   }
 }
@@ -608,11 +648,16 @@ const AuthenticatedLoanOfficerRouteWithChildren =
   )
 
 interface AuthenticatedMdRouteChildren {
+  AuthenticatedMdApplicationIdRoute: typeof AuthenticatedMdApplicationIdRoute
   AuthenticatedMdIndexRoute: typeof AuthenticatedMdIndexRoute
+  AuthenticatedMdApplicationIdBankStatementRoute: typeof AuthenticatedMdApplicationIdBankStatementRoute
 }
 
 const AuthenticatedMdRouteChildren: AuthenticatedMdRouteChildren = {
+  AuthenticatedMdApplicationIdRoute: AuthenticatedMdApplicationIdRoute,
   AuthenticatedMdIndexRoute: AuthenticatedMdIndexRoute,
+  AuthenticatedMdApplicationIdBankStatementRoute:
+    AuthenticatedMdApplicationIdBankStatementRoute,
 }
 
 const AuthenticatedMdRouteWithChildren = AuthenticatedMdRoute._addFileChildren(

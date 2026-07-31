@@ -8,7 +8,14 @@ import { ApplicationDetailView } from '#/components/loans/application-detail'
 import { DecisionModal } from '#/components/loans/decision-modal'
 import { Sidebar } from '#/components/loans/sidebar'
 import { Button } from '#/components/ui/button'
-import { approveByBranchFn, declineByBranchFn, getApplicationFn, postQueryMessageFn } from '#/lib/loans/loans.functions'
+import {
+  approveByBranchFn,
+  declineByBranchFn,
+  deleteBankStatementFn,
+  getApplicationFn,
+  postQueryMessageFn,
+  uploadBankStatementFn,
+} from '#/lib/loans/loans.functions'
 
 export const Route = createFileRoute('/_authenticated/branch-officer/$applicationId')({
   loader: ({ params }) => getApplicationFn({ data: { id: params.applicationId } }),
@@ -25,6 +32,8 @@ function BranchOfficerApplicationDetail() {
   const postQueryMessage = useServerFn(postQueryMessageFn)
   const approve = useServerFn(approveByBranchFn)
   const decline = useServerFn(declineByBranchFn)
+  const uploadBankStatement = useServerFn(uploadBankStatementFn)
+  const deleteBankStatement = useServerFn(deleteBankStatementFn)
 
   const [approveOpen, setApproveOpen] = useState(false)
   const [declineOpen, setDeclineOpen] = useState(false)
@@ -55,6 +64,28 @@ function BranchOfficerApplicationDetail() {
           bankStatementReportHref={`/branch-officer/${applicationId}/bank-statement`}
           bankAnalysisRunAt={data.application.bankAnalysisRunAt}
           onRunBankAnalysis={() => navigate({ to: '/branch-officer/$applicationId/analyze', params: { applicationId } })}
+          onUploadBankStatement={async (file) => {
+            const formData = new FormData()
+            formData.set('applicationId', applicationId)
+            formData.set('file', file)
+            try {
+              await uploadBankStatement({ data: formData })
+              await router.invalidate()
+              toast.success('Bank statement uploaded')
+            } catch (err) {
+              toast.error(err instanceof Error ? err.message : 'Failed to upload bank statement')
+              throw err
+            }
+          }}
+          onDeleteBankStatement={async (documentId) => {
+            try {
+              await deleteBankStatement({ data: { documentId } })
+              await router.invalidate()
+              toast.success('Bank statement removed')
+            } catch (err) {
+              toast.error(err instanceof Error ? err.message : 'Failed to remove bank statement')
+            }
+          }}
           headerActions={
             canDecide ? (
               <>

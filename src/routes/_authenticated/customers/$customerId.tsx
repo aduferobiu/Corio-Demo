@@ -16,6 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '#
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '#/components/ui/tabs'
 import { getCustomerFn, updateCustomerFn } from '#/lib/customers/customers.functions'
 import { formatDate, formatEmploymentType, formatNaira } from '#/lib/loans/format'
+import { ROLE_APPLICATION_DETAIL } from '#/lib/auth/role-routes'
 
 export const Route = createFileRoute('/_authenticated/customers/$customerId')({
   loader: ({ params }) => getCustomerFn({ data: { id: params.customerId } }),
@@ -177,7 +178,11 @@ function CustomerDetail() {
                       </TableRow>
                     )}
                     {applications.map((app) => (
-                      <TableRow key={app.id}>
+                      <TableRow
+                        key={app.id}
+                        className="cursor-pointer"
+                        onClick={() => navigate({ to: ROLE_APPLICATION_DETAIL[user!.role](app.id) })}
+                      >
                         <TableCell className="text-sm text-[var(--corio-neutral-800)]">{formatNaira(app.amountRequested)}</TableCell>
                         <TableCell className="text-sm text-[var(--corio-neutral-800)]">
                           {app.monthlyIncome ? formatNaira(app.monthlyIncome) : '—'}

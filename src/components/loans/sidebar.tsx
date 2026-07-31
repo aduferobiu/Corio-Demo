@@ -33,7 +33,7 @@ export function Sidebar({ user, active }: { user: AuthUser; active: string }) {
         <button
           type="button"
           onClick={() => setCollapsed((v) => !v)}
-          className="flex shrink-0 items-center justify-center text-white/80 hover:text-white"
+          className="flex shrink-0 cursor-pointer items-center justify-center text-white/80 hover:text-white"
         >
           {collapsed ? <PanelLeftOpen className="size-5" /> : <PanelLeftClose className="size-5" />}
         </button>
@@ -51,7 +51,7 @@ export function Sidebar({ user, active }: { user: AuthUser; active: string }) {
               onClick={() => item.href && navigate({ to: item.href })}
               title={item.label}
               className={cn(
-                'flex w-full items-center gap-2 rounded-lg px-4 py-2 text-left text-sm font-medium text-white transition-colors',
+                'flex w-full cursor-pointer items-center gap-2 rounded-lg px-4 py-2 text-left text-sm font-medium text-white transition-colors',
                 collapsed && 'justify-center px-2',
                 isActive ? 'bg-[var(--corio-blue-500)]' : 'opacity-80 hover:opacity-100 disabled:cursor-not-allowed',
               )}
@@ -69,7 +69,7 @@ export function Sidebar({ user, active }: { user: AuthUser; active: string }) {
             await navigate({ to: '/login' })
           }}
           className={cn(
-            'flex w-full items-center gap-2 rounded-lg px-4 py-2 text-left text-sm font-medium text-white opacity-80 transition-colors hover:opacity-100',
+            'flex w-full cursor-pointer items-center gap-2 rounded-lg px-4 py-2 text-left text-sm font-medium text-white opacity-80 transition-colors hover:opacity-100',
             collapsed && 'justify-center px-2',
           )}
         >
@@ -82,7 +82,7 @@ export function Sidebar({ user, active }: { user: AuthUser; active: string }) {
         type="button"
         onClick={() => navigate({ to: '/settings' })}
         className={cn(
-          'mt-auto flex items-center gap-2 rounded-2xl bg-white/10 p-3 text-left shadow-[0px_1px_2px_0px_rgba(228,229,231,0.24)] hover:bg-white/15',
+          'mt-auto flex cursor-pointer items-center gap-2 rounded-2xl bg-white/10 p-3 text-left shadow-[0px_1px_2px_0px_rgba(228,229,231,0.24)] hover:bg-white/15',
           collapsed ? 'mx-3 justify-center' : 'mx-5 justify-between',
         )}
       >

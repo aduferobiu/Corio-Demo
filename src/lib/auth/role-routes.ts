@@ -17,3 +17,13 @@ export const ROLE_LOAN_HOME: Record<Role, string> = {
   md: '/md',
   admin: '/coming-soon',
 }
+
+// Where each role's per-application detail view lives — used to build links to a
+// specific loan application (e.g. from a customer's application history).
+export const ROLE_APPLICATION_DETAIL: Record<Role, (applicationId: string) => string> = {
+  loan_officer: (id) => `/loan-officer/${id}`,
+  branch_officer: (id) => `/branch-officer/${id}`,
+  credit_officer: (id) => `/credit-officer/${id}`,
+  md: (id) => `/md/${id}`,
+  admin: (id) => `/md/${id}`,
+}

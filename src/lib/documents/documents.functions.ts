@@ -1,10 +1,26 @@
-import { desc, eq } from 'drizzle-orm'
+import { desc, eq, inArray } from 'drizzle-orm'
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
 import { db } from '#/db/client'
 import { companyDocumentActivity, companyDocumentVersions, companyDocuments, users } from '#/db/schema'
 import { authMiddleware, requireRole } from '#/lib/auth/middleware'
+
+async function notifyApprovers(documentName: string, requestedByName: string) {
+  const { createNotification } = await import('#/lib/notifications/create-notification.server')
+  const approvers = await db.select().from(users).where(inArray(users.role, ['md', 'admin']))
+  await Promise.all(
+    approvers.map((approver) =>
+      createNotification({
+        userId: approver.id,
+        type: 'document_upload_request',
+        title: 'Document awaiting your approval',
+        body: `${requestedByName} uploaded "${documentName}" and it needs your approval`,
+        link: '/documents',
+      }),
+    ),
+  )
+}
 
 const FOLDERS = ['general', 'loans', 'contracts', 'invoices', 'hr', 'compliance', 'reports'] as const
 
@@ -138,6 +154,8 @@ export const createCompanyDocumentFn = createServerFn({ method: 'POST' })
         action: 'approved',
         detail: 'Auto-approved',
       })
+    } else {
+      await notifyApprovers(data.name, context.user.name)
     }
 
     return document
@@ -200,6 +218,8 @@ export const uploadNewVersionFn = createServerFn({ method: 'POST' })
         action: 'approved',
         detail: 'Auto-approved',
       })
+    } else {
+      await notifyApprovers(document.name, context.user.name)
     }
 
     return { ok: true }
@@ -226,11 +246,22 @@ export const approveCompanyDocumentFn = createServerFn({ method: 'POST' })
   .middleware([requireRole('md', 'admin')])
   .validator(z.object({ id: z.string() }))
   .handler(async ({ context, data }) => {
-    await db
+    const [document] = await db
       .update(companyDocuments)
       .set({ status: 'approved', approvedByUserId: context.user.id, updatedAt: new Date() })
       .where(eq(companyDocuments.id, data.id))
+      .returning()
     await db.insert(companyDocumentActivity).values({ documentId: data.id, actorUserId: context.user.id, action: 'approved' })
+    if (document) {
+      const { createNotification } = await import('#/lib/notifications/create-notification.server')
+      await createNotification({
+        userId: document.ownerUserId,
+        type: 'document_decision',
+        title: 'Document approved',
+        body: `"${document.name}" was approved by ${context.user.name}`,
+        link: '/documents',
+      })
+    }
     return { ok: true }
   })
 
@@ -238,11 +269,22 @@ export const rejectCompanyDocumentFn = createServerFn({ method: 'POST' })
   .middleware([requireRole('md', 'admin')])
   .validator(z.object({ id: z.string() }))
   .handler(async ({ context, data }) => {
-    await db
+    const [document] = await db
       .update(companyDocuments)
       .set({ status: 'rejected', approvedByUserId: context.user.id, updatedAt: new Date() })
       .where(eq(companyDocuments.id, data.id))
+      .returning()
     await db.insert(companyDocumentActivity).values({ documentId: data.id, actorUserId: context.user.id, action: 'rejected' })
+    if (document) {
+      const { createNotification } = await import('#/lib/notifications/create-notification.server')
+      await createNotification({
+        userId: document.ownerUserId,
+        type: 'document_decision',
+        title: 'Document rejected',
+        body: `"${document.name}" was rejected by ${context.user.name}`,
+        link: '/documents',
+      })
+    }
     return { ok: true }
   })
 
@@ -260,6 +302,14 @@ export const bulkDecidePendingFn = createServerFn({ method: 'POST' })
         documentId: doc.id,
         actorUserId: context.user.id,
         action: data.decision === 'approved' ? 'approved' : 'rejected',
+      })
+      const { createNotification } = await import('#/lib/notifications/create-notification.server')
+      await createNotification({
+        userId: doc.ownerUserId,
+        type: 'document_decision',
+        title: data.decision === 'approved' ? 'Document approved' : 'Document rejected',
+        body: `"${doc.name}" was ${data.decision} by ${context.user.name}`,
+        link: '/documents',
       })
     }
     return { ok: true, count: pending.length }

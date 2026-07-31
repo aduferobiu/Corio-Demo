@@ -10,6 +10,10 @@ export function formatTime(date: Date | string) {
   return new Date(date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 }
 
+export function formatDateTime(date: Date | string) {
+  return `${formatDate(date)} · ${formatTime(date)}`
+}
+
 export function formatQueueDuration(since: Date | string) {
   const minutes = Math.max(0, Math.round((Date.now() - new Date(since).getTime()) / 60000))
   if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'}`

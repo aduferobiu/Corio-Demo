@@ -1,12 +1,24 @@
 import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { ChevronRight, FileText, Trash2 } from 'lucide-react'
+import { ChevronRight, FileText, History, Plus, Trash2 } from 'lucide-react'
 
 import { Button } from '#/components/ui/button'
+import { AuditTrailPanel } from '#/components/loans/audit-trail-panel'
+import { BankStatementUploadModal } from '#/components/loans/bank-statement-upload-modal'
 import { ContentField } from '#/components/loans/content-field'
 import { QueryThreadPanel } from '#/components/loans/query-thread'
 import { StatusBadge, type LoanStatus } from '#/components/loans/status-badge'
 import { formatEmploymentType, formatLoanType, formatNaira, formatQueueDuration } from '#/lib/loans/format'
+
+type AuditEntry = {
+  id: string
+  fromStatus: string | null
+  toStatus: string
+  note: string | null
+  createdAt: Date
+  actorName: string
+  actorRole: string
+}
 
 type ApplicationRow = {
   id: string
@@ -43,10 +55,13 @@ type ThreadComment = {
   author: { name: string; role: string }
 }
 
-function Card({ title, children }: { title: string; children: React.ReactNode }) {
+function Card({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="flex w-full flex-col gap-5 rounded-2xl bg-[var(--corio-neutral-100)] p-6">
-      <p className="text-base font-semibold text-[var(--corio-neutral-600)]">{title}</p>
+      <div className="flex items-center justify-between">
+        <p className="text-base font-semibold text-[var(--corio-neutral-600)]">{title}</p>
+        {action}
+      </div>
       {children}
     </div>
   )
@@ -63,6 +78,9 @@ export function ApplicationDetailView({
   bankStatementReportHref,
   bankAnalysisRunAt,
   onRunBankAnalysis,
+  onUploadBankStatement,
+  onDeleteBankStatement,
+  auditTrail,
 }: {
   application: ApplicationRow
   comments: ThreadComment[]
@@ -74,10 +92,16 @@ export function ApplicationDetailView({
   bankStatementReportHref?: string
   bankAnalysisRunAt?: Date | null
   onRunBankAnalysis?: () => void
+  onUploadBankStatement?: (file: File) => Promise<void>
+  onDeleteBankStatement?: (documentId: string) => Promise<void>
+  auditTrail?: AuditEntry[]
 }) {
   const [queryOpen, setQueryOpen] = useState(false)
+  const [uploadStatementOpen, setUploadStatementOpen] = useState(false)
+  const [auditTrailOpen, setAuditTrailOpen] = useState(false)
 
-  const bankStatementDoc = documents.find((d) => d.documentType === 'Bank Statement')
+  const bankStatementDocs = documents.filter((d) => d.documentType === 'Bank Statement')
+  const statementsLocked = Boolean(bankAnalysisRunAt)
   const otherDocs = documents.filter((d) => d.documentType !== 'Bank Statement' && d.documentType !== 'Query Attachment')
   const threadAttachments = documents.filter((d) => d.commentId)
   const employerOrBusiness = application.employmentType === 'self_employed' ? application.businessName : application.employerName
@@ -103,6 +127,16 @@ export function ApplicationDetailView({
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-4">
+          {auditTrail && (
+            <button
+              type="button"
+              title="Audit trail"
+              onClick={() => setAuditTrailOpen((v) => !v)}
+              className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-[var(--corio-neutral-200)] text-[var(--corio-neutral-500)] hover:bg-[var(--corio-neutral-100)]"
+            >
+              <History className="size-4.5" />
+            </button>
+          )}
           <Button variant="outline" size="sm" className="h-9" onClick={() => setQueryOpen((v) => !v)}>
             View Query
           </Button>
@@ -133,10 +167,10 @@ export function ApplicationDetailView({
         </div>
       </div>
 
-      <div className="mt-[17px] flex flex-col items-start gap-6 xl:flex-row">
-        <div className="flex w-full flex-col gap-6 xl:w-[606px] xl:shrink-0">
+      <div className="mt-[17px] mx-auto flex w-full max-w-[1600px] flex-col items-start gap-6 xl:flex-row">
+        <div className="flex w-full min-w-0 flex-col gap-6 xl:flex-1">
           <Card title="Personal Information">
-            <div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-2 2xl:grid-cols-3">
               <ContentField label="Full Name" value={application.applicantName} />
               <ContentField label="Phone Number" value={application.applicantPhone} />
               <ContentField label="BVN" value={application.bvn ?? '—'} />
@@ -152,7 +186,7 @@ export function ApplicationDetailView({
           </Card>
 
           <Card title="Loan Details">
-            <div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-2 2xl:grid-cols-3">
               <ContentField label="Loan Amount Requested" value={formatNaira(application.amountRequested)} />
               <ContentField label="Loan Type" value={formatLoanType(application.loanType)} />
               <ContentField label="Loan Purpose" value={application.loanPurpose ?? '—'} />
@@ -177,22 +211,45 @@ export function ApplicationDetailView({
             ))}
           </Card>
 
-          <Card title="Bank Statement">
-            {bankStatementDoc ? (
+          <Card
+            title="Bank Statement"
+            action={
+              onUploadBankStatement && !statementsLocked ? (
+                <button
+                  type="button"
+                  onClick={() => setUploadStatementOpen(true)}
+                  className="flex items-center gap-1 text-sm font-medium text-[var(--corio-blue-500)]"
+                >
+                  <Plus className="size-5" />
+                  {bankStatementDocs.length > 0 ? 'Add Document' : 'New Bank Statement'}
+                </button>
+              ) : undefined
+            }
+          >
+            {bankStatementDocs.length > 0 ? (
               <>
-                <div className="flex w-full items-center gap-3 rounded-xl border border-[var(--corio-neutral-200)] bg-white py-3 pr-5 pl-3 shadow-[0px_2px_4px_0px_rgba(27,28,29,0.04)]">
-                  <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--corio-neutral-100)] text-[var(--corio-blue-500)]">
-                    <FileText className="size-5" />
+                {bankStatementDocs.map((doc) => (
+                  <div
+                    key={doc.id}
+                    className="flex w-full items-center gap-3 rounded-xl border border-[var(--corio-neutral-200)] bg-white py-3 pr-5 pl-3 shadow-[0px_2px_4px_0px_rgba(27,28,29,0.04)]"
+                  >
+                    <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--corio-neutral-100)] text-[var(--corio-blue-500)]">
+                      <FileText className="size-5" />
+                    </div>
+                    <div className="flex min-w-0 flex-1 flex-col">
+                      <p className="truncate text-sm font-medium text-[var(--corio-neutral-900)]">{doc.fileName}</p>
+                      <p className="text-xs text-[var(--corio-neutral-500)]">Uploaded with application</p>
+                    </div>
+                    {onDeleteBankStatement && !statementsLocked && (
+                      <button type="button" onClick={() => onDeleteBankStatement(doc.id)} className="shrink-0 text-[var(--corio-neutral-400)] hover:text-destructive">
+                        <Trash2 className="size-5" />
+                      </button>
+                    )}
                   </div>
-                  <div className="flex min-w-0 flex-1 flex-col">
-                    <p className="truncate text-sm font-medium text-[var(--corio-neutral-900)]">{bankStatementDoc.fileName}</p>
-                    <p className="text-xs text-[var(--corio-neutral-500)]">Uploaded with application</p>
-                  </div>
-                  <Trash2 className="size-5 shrink-0 text-[var(--corio-neutral-400)]" />
-                </div>
-                {onRunBankAnalysis && !bankAnalysisRunAt ? (
+                ))}
+                {onRunBankAnalysis && !statementsLocked ? (
                   <Button className="w-full" onClick={onRunBankAnalysis}>
-                    Run Analysis
+                    Analyse Statement
                   </Button>
                 ) : (
                   bankStatementReportHref && (
@@ -217,6 +274,12 @@ export function ApplicationDetailView({
         canWrite={canWriteQuery}
         onSend={onSendQuery}
       />
+
+      {onUploadBankStatement && (
+        <BankStatementUploadModal open={uploadStatementOpen} onOpenChange={setUploadStatementOpen} onUpload={onUploadBankStatement} />
+      )}
+
+      {auditTrail && <AuditTrailPanel open={auditTrailOpen} onClose={() => setAuditTrailOpen(false)} entries={auditTrail} />}
     </main>
   )
 }

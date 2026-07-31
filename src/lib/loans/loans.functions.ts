@@ -39,7 +39,19 @@ export const getApplicationFn = createServerFn({ method: 'GET' })
 
     const applicationDocuments = await db.select().from(documents).where(eq(documents.loanApplicationId, application.id))
 
-    return { application, comments: applicationComments, documents: applicationDocuments }
+    const history = await db
+      .select({ entry: loanStatusHistory, actor: users })
+      .from(loanStatusHistory)
+      .innerJoin(users, eq(users.id, loanStatusHistory.actorUserId))
+      .where(eq(loanStatusHistory.loanApplicationId, application.id))
+      .orderBy(loanStatusHistory.createdAt)
+
+    return {
+      application,
+      comments: applicationComments,
+      documents: applicationDocuments,
+      history: history.map((h) => ({ ...h.entry, actorName: h.actor.name, actorRole: h.actor.role })),
+    }
   })
 
 export const listCreditQueueFn = createServerFn({ method: 'GET' })
@@ -276,6 +288,17 @@ export const postQueryMessageFn = createServerFn({ method: 'POST' })
       actorUserId: context.user.id,
     })
 
+    if (application.createdByUserId !== context.user.id) {
+      const { createNotification } = await import('#/lib/notifications/create-notification.server')
+      await createNotification({
+        userId: application.createdByUserId,
+        type: isRaisingQuery ? 'query_raised' : 'query_response',
+        title: isRaisingQuery ? 'New query on your application' : 'Reply posted to your query',
+        body: `${context.user.name} ${isRaisingQuery ? 'raised a query on' : 'responded to your query on'} ${application.referenceNumber} — ${application.applicantName}`,
+        link: `/loan-officer/${application.id}`,
+      })
+    }
+
     return { ok: true }
   })
 
@@ -304,6 +327,15 @@ export const approveByCreditFn = createServerFn({ method: 'POST' })
       toStatus: 'approved',
       actorUserId: context.user.id,
       note: data.notes,
+    })
+
+    const { createNotification } = await import('#/lib/notifications/create-notification.server')
+    await createNotification({
+      userId: application.createdByUserId,
+      type: 'loan_activity',
+      title: 'Application approved',
+      body: `${application.referenceNumber} — ${application.applicantName} was approved by credit review`,
+      link: `/loan-officer/${application.id}`,
     })
 
     return { ok: true }
@@ -336,6 +368,15 @@ export const rejectByCreditFn = createServerFn({ method: 'POST' })
       note: data.notes,
     })
 
+    const { createNotification } = await import('#/lib/notifications/create-notification.server')
+    await createNotification({
+      userId: application.createdByUserId,
+      type: 'loan_activity',
+      title: 'Application rejected',
+      body: `${application.referenceNumber} — ${application.applicantName} was rejected by credit review`,
+      link: `/loan-officer/${application.id}`,
+    })
+
     return { ok: true }
   })
 
@@ -358,6 +399,15 @@ export const approveByBranchFn = createServerFn({ method: 'POST' })
       toStatus: 'with_credit',
       actorUserId: context.user.id,
       note: data.notes,
+    })
+
+    const { createNotification } = await import('#/lib/notifications/create-notification.server')
+    await createNotification({
+      userId: application.createdByUserId,
+      type: 'loan_activity',
+      title: 'Application sent to credit review',
+      body: `${application.referenceNumber} — ${application.applicantName} was approved by the branch and is now with credit`,
+      link: `/loan-officer/${application.id}`,
     })
 
     return { ok: true }
@@ -390,16 +440,34 @@ export const declineByBranchFn = createServerFn({ method: 'POST' })
       note: data.notes,
     })
 
+    const { createNotification } = await import('#/lib/notifications/create-notification.server')
+    await createNotification({
+      userId: application.createdByUserId,
+      type: 'loan_activity',
+      title: 'Application declined',
+      body: `${application.referenceNumber} — ${application.applicantName} was declined by the branch`,
+      link: `/loan-officer/${application.id}`,
+    })
+
     return { ok: true }
   })
 
 // Illustrative — marks the analysis as "run" so the UI can switch from
 // "Run Analysis" to "View Report". The report itself is always derived
 // deterministically from the application's declared figures (see bank-analysis.ts).
+// Once run, the bank statement list is locked (see uploadBankStatementFn/deleteBankStatementFn).
 export const runBankAnalysisFn = createServerFn({ method: 'POST' })
   .middleware([requireRole('branch_officer')])
   .validator(z.object({ applicationId: z.string() }))
   .handler(async ({ data }) => {
+    const statements = await db
+      .select()
+      .from(documents)
+      .where(eq(documents.loanApplicationId, data.applicationId))
+    if (!statements.some((d) => d.documentType === 'Bank Statement')) {
+      throw new Error('Upload at least one bank statement before running the analysis')
+    }
+
     const [application] = await db
       .update(loanApplications)
       .set({ bankAnalysisRunAt: new Date() })
@@ -407,4 +475,53 @@ export const runBankAnalysisFn = createServerFn({ method: 'POST' })
       .returning()
     if (!application) throw new Error('Not found')
     return application
+  })
+
+// Branch officers can attach multiple bank statements while an application is still
+// under review. Once runBankAnalysisFn has run, the list is locked — no further
+// statements can be added or removed, since the analysis report already reflects them.
+export const uploadBankStatementFn = createServerFn({ method: 'POST' })
+  .middleware([requireRole('branch_officer')])
+  .validator((formData: unknown) => {
+    if (!(formData instanceof FormData)) throw new Error('Expected FormData')
+    const applicationId = formData.get('applicationId')
+    const file = formData.get('file')
+    if (typeof applicationId !== 'string') throw new Error('Invalid application')
+    if (!(file instanceof File) || file.size === 0) throw new Error('A file is required')
+    return { applicationId, file }
+  })
+  .handler(async ({ context, data }) => {
+    const [application] = await db.select().from(loanApplications).where(eq(loanApplications.id, data.applicationId)).limit(1)
+    if (!application) throw new Error('Not found')
+    if (application.bankAnalysisRunAt) throw new Error('Bank statement analysis has already been run for this application')
+
+    const { writeUploadedFile, fileToDataUrl } = await import('#/lib/documents/storage.server')
+    const [storedPath, dataUrl] = await Promise.all([writeUploadedFile(application.id, data.file), fileToDataUrl(data.file)])
+
+    await db.insert(documents).values({
+      loanApplicationId: application.id,
+      uploadedByUserId: context.user.id,
+      fileName: data.file.name,
+      storedPath,
+      dataUrl,
+      mimeType: data.file.type || 'application/octet-stream',
+      fileSize: data.file.size,
+      documentType: 'Bank Statement',
+    })
+
+    return { ok: true }
+  })
+
+export const deleteBankStatementFn = createServerFn({ method: 'POST' })
+  .middleware([requireRole('branch_officer')])
+  .validator(z.object({ documentId: z.string() }))
+  .handler(async ({ data }) => {
+    const [document] = await db.select().from(documents).where(eq(documents.id, data.documentId)).limit(1)
+    if (!document || document.documentType !== 'Bank Statement') throw new Error('Not found')
+
+    const [application] = await db.select().from(loanApplications).where(eq(loanApplications.id, document.loanApplicationId)).limit(1)
+    if (application?.bankAnalysisRunAt) throw new Error('Bank statement analysis has already been run for this application')
+
+    await db.delete(documents).where(eq(documents.id, data.documentId))
+    return { ok: true }
   })
