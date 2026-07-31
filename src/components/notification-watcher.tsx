@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useServerFn } from '@tanstack/react-start'
+import { X } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { usePoll } from '#/lib/hooks/use-poll'
@@ -34,17 +35,33 @@ export function NotificationWatcher() {
 
   function showToast(n: Notification) {
     const Icon = NOTIFICATION_ICONS[n.type]
-    toast(n.title, {
-      description: n.body,
-      duration: 5000,
-      icon: <Icon className="size-4 text-[var(--corio-blue-500)]" />,
-      action: n.link
-        ? {
-            label: 'View',
-            onClick: () => navigate({ to: n.link! }),
-          }
-        : undefined,
-    })
+    toast.custom(
+      (id) => (
+        <div className="relative flex w-[380px] items-start gap-3 rounded-2xl border border-[var(--corio-neutral-100)] bg-white p-4 pr-9 shadow-[0px_16px_40px_-8px_rgba(88,92,95,0.16)]">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--corio-neutral-100)] text-[var(--corio-blue-500)]">
+            <Icon className="size-4" />
+          </div>
+          <button
+            type="button"
+            onClick={() => toast.dismiss(id)}
+            className="absolute top-3 right-3 cursor-pointer text-[var(--corio-neutral-400)] hover:text-[var(--corio-neutral-600)]"
+          >
+            <X className="size-4" />
+          </button>
+          <div
+            className="flex min-w-0 flex-1 cursor-pointer flex-col gap-0.5"
+            onClick={() => {
+              toast.dismiss(id)
+              if (n.link) navigate({ to: n.link })
+            }}
+          >
+            <p className="text-sm font-medium text-[var(--corio-neutral-800)]">{n.title}</p>
+            <p className="text-sm text-[var(--corio-neutral-600)]">{n.body}</p>
+          </div>
+        </div>
+      ),
+      { duration: 5000, unstyled: true },
+    )
   }
 
   async function checkForNew() {

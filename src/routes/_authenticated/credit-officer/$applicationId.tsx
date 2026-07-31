@@ -57,7 +57,6 @@ function CreditOfficerApplicationDetail() {
             if (file) formData.set('file', file)
             await postQueryMessage({ data: formData })
             await router.invalidate()
-            toast.success('Message sent')
           }}
           bankStatementReportHref={`/credit-officer/${applicationId}/bank-statement`}
           hasUnreadQuery={data.hasUnreadQuery}

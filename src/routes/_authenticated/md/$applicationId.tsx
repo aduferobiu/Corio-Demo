@@ -57,7 +57,6 @@ function MdApplicationDetail() {
             if (file) formData.set('file', file)
             await postQueryMessage({ data: formData })
             await router.invalidate()
-            toast.success('Message sent')
           }}
           bankStatementReportHref={`/md/${applicationId}/bank-statement`}
           auditTrail={data.history}

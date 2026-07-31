@@ -1,6 +1,5 @@
 import { createFileRoute, useNavigate, useRouter } from '@tanstack/react-router'
 import { useServerFn } from '@tanstack/react-start'
-import { toast } from 'sonner'
 
 import { AppHeader } from '#/components/loans/app-header'
 import { ApplicationDetailView } from '#/components/loans/application-detail'
@@ -44,7 +43,6 @@ function LoanOfficerApplicationDetail() {
             if (file) formData.set('file', file)
             await postQueryMessage({ data: formData })
             await router.invalidate()
-            toast.success('Message sent')
           }}
           bankStatementReportHref={`/loan-officer/${applicationId}/bank-statement`}
           hasUnreadQuery={data.hasUnreadQuery}

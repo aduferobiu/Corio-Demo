@@ -64,7 +64,6 @@ function BranchOfficerApplicationDetail() {
             if (file) formData.set('file', file)
             await postQueryMessage({ data: formData })
             await router.invalidate()
-            toast.success('Message sent')
           }}
           bankStatementReportHref={`/branch-officer/${applicationId}/bank-statement`}
           bankAnalysisRunAt={data.application.bankAnalysisRunAt}
