@@ -21,6 +21,7 @@ import { Route as AuthenticatedMdRouteImport } from './routes/_authenticated/md'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedBranchOfficerIndexRouteImport } from './routes/_authenticated/branch-officer/index'
 import { Route as AuthenticatedBranchOfficerApplicationIdRouteImport } from './routes/_authenticated/branch-officer/$applicationId'
+import { Route as AuthenticatedBranchOfficerLoanRouteImport } from './routes/_authenticated/branch-officer/loan'
 import { Route as AuthenticatedCreditOfficerIndexRouteImport } from './routes/_authenticated/credit-officer/index'
 import { Route as AuthenticatedCreditOfficerApplicationIdRouteImport } from './routes/_authenticated/credit-officer/$applicationId'
 import { Route as AuthenticatedCreditOfficerDashboardRouteImport } from './routes/_authenticated/credit-officer/dashboard'
@@ -100,6 +101,12 @@ const AuthenticatedBranchOfficerApplicationIdRoute =
   AuthenticatedBranchOfficerApplicationIdRouteImport.update({
     id: '/$applicationId',
     path: '/$applicationId',
+    getParentRoute: () => AuthenticatedBranchOfficerRoute,
+  } as any)
+const AuthenticatedBranchOfficerLoanRoute =
+  AuthenticatedBranchOfficerLoanRouteImport.update({
+    id: '/loan',
+    path: '/loan',
     getParentRoute: () => AuthenticatedBranchOfficerRoute,
   } as any)
 const AuthenticatedCreditOfficerIndexRoute =
@@ -209,6 +216,7 @@ export interface FileRoutesByFullPath {
   '/md': typeof AuthenticatedMdRouteWithChildren
   '/settings': typeof AuthenticatedSettingsRoute
   '/branch-officer/$applicationId': typeof AuthenticatedBranchOfficerApplicationIdRoute
+  '/branch-officer/loan': typeof AuthenticatedBranchOfficerLoanRoute
   '/credit-officer/$applicationId': typeof AuthenticatedCreditOfficerApplicationIdRoute
   '/credit-officer/dashboard': typeof AuthenticatedCreditOfficerDashboardRoute
   '/customers/$customerId': typeof AuthenticatedCustomersCustomerIdRoute
@@ -234,6 +242,7 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsRoute
   '/': typeof AuthenticatedIndexRoute
   '/branch-officer/$applicationId': typeof AuthenticatedBranchOfficerApplicationIdRoute
+  '/branch-officer/loan': typeof AuthenticatedBranchOfficerLoanRoute
   '/credit-officer/$applicationId': typeof AuthenticatedCreditOfficerApplicationIdRoute
   '/credit-officer/dashboard': typeof AuthenticatedCreditOfficerDashboardRoute
   '/customers/$customerId': typeof AuthenticatedCustomersCustomerIdRoute
@@ -265,6 +274,7 @@ export interface FileRoutesById {
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/branch-officer/$applicationId': typeof AuthenticatedBranchOfficerApplicationIdRoute
+  '/_authenticated/branch-officer/loan': typeof AuthenticatedBranchOfficerLoanRoute
   '/_authenticated/credit-officer/$applicationId': typeof AuthenticatedCreditOfficerApplicationIdRoute
   '/_authenticated/credit-officer/dashboard': typeof AuthenticatedCreditOfficerDashboardRoute
   '/_authenticated/customers/$customerId': typeof AuthenticatedCustomersCustomerIdRoute
@@ -296,6 +306,7 @@ export interface FileRouteTypes {
     | '/md'
     | '/settings'
     | '/branch-officer/$applicationId'
+    | '/branch-officer/loan'
     | '/credit-officer/$applicationId'
     | '/credit-officer/dashboard'
     | '/customers/$customerId'
@@ -321,6 +332,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/'
     | '/branch-officer/$applicationId'
+    | '/branch-officer/loan'
     | '/credit-officer/$applicationId'
     | '/credit-officer/dashboard'
     | '/customers/$customerId'
@@ -351,6 +363,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings'
     | '/_authenticated/'
     | '/_authenticated/branch-officer/$applicationId'
+    | '/_authenticated/branch-officer/loan'
     | '/_authenticated/credit-officer/$applicationId'
     | '/_authenticated/credit-officer/dashboard'
     | '/_authenticated/customers/$customerId'
@@ -459,6 +472,13 @@ declare module '@tanstack/react-router' {
       path: '/$applicationId'
       fullPath: '/branch-officer/$applicationId'
       preLoaderRoute: typeof AuthenticatedBranchOfficerApplicationIdRouteImport
+      parentRoute: typeof AuthenticatedBranchOfficerRoute
+    }
+    '/_authenticated/branch-officer/loan': {
+      id: '/_authenticated/branch-officer/loan'
+      path: '/loan'
+      fullPath: '/branch-officer/loan'
+      preLoaderRoute: typeof AuthenticatedBranchOfficerLoanRouteImport
       parentRoute: typeof AuthenticatedBranchOfficerRoute
     }
     '/_authenticated/credit-officer/': {
@@ -578,6 +598,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedBranchOfficerRouteChildren {
   AuthenticatedBranchOfficerApplicationIdRoute: typeof AuthenticatedBranchOfficerApplicationIdRoute
+  AuthenticatedBranchOfficerLoanRoute: typeof AuthenticatedBranchOfficerLoanRoute
   AuthenticatedBranchOfficerIndexRoute: typeof AuthenticatedBranchOfficerIndexRoute
   AuthenticatedBranchOfficerApplicationIdAnalyzeRoute: typeof AuthenticatedBranchOfficerApplicationIdAnalyzeRoute
   AuthenticatedBranchOfficerApplicationIdBankStatementRoute: typeof AuthenticatedBranchOfficerApplicationIdBankStatementRoute
@@ -587,6 +608,7 @@ const AuthenticatedBranchOfficerRouteChildren: AuthenticatedBranchOfficerRouteCh
   {
     AuthenticatedBranchOfficerApplicationIdRoute:
       AuthenticatedBranchOfficerApplicationIdRoute,
+    AuthenticatedBranchOfficerLoanRoute: AuthenticatedBranchOfficerLoanRoute,
     AuthenticatedBranchOfficerIndexRoute: AuthenticatedBranchOfficerIndexRoute,
     AuthenticatedBranchOfficerApplicationIdAnalyzeRoute:
       AuthenticatedBranchOfficerApplicationIdAnalyzeRoute,

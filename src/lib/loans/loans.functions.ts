@@ -22,6 +22,18 @@ export const listMyApplicationsFn = createServerFn({ method: 'GET' })
       .orderBy(desc(loanApplications.createdAt))
   })
 
+// Branch officers see every application submitted at their branch (read-only —
+// they can't create new applications, only review/decide on them).
+export const listBranchApplicationsFn = createServerFn({ method: 'GET' })
+  .middleware([requireRole('branch_officer')])
+  .handler(async ({ context }) => {
+    return db
+      .select()
+      .from(loanApplications)
+      .where(eq(loanApplications.branch, context.user.branch ?? ''))
+      .orderBy(desc(loanApplications.createdAt))
+  })
+
 export const getApplicationFn = createServerFn({ method: 'GET' })
   .middleware([authMiddleware])
   .validator(z.object({ id: z.string() }))
@@ -104,7 +116,7 @@ const applicantSchema = z.object({
 })
 
 export const createApplicationFn = createServerFn({ method: 'POST' })
-  .middleware([requireRole('loan_officer', 'admin', 'branch_officer')])
+  .middleware([requireRole('loan_officer', 'admin')])
   .validator((formData: unknown) => {
     if (!(formData instanceof FormData)) throw new Error('Expected FormData')
     const raw = Object.fromEntries(formData.entries())
@@ -391,6 +403,11 @@ export const approveByBranchFn = createServerFn({ method: 'POST' })
     const [application] = await db.select().from(loanApplications).where(eq(loanApplications.id, data.applicationId)).limit(1)
     if (!application) throw new Error('Not found')
     if (application.status !== 'submitted') throw new Error('Application is not awaiting branch review')
+
+    const statements = await db.select().from(documents).where(eq(documents.loanApplicationId, application.id))
+    if (!statements.some((d) => d.documentType === 'Bank Statement')) {
+      throw new Error('Upload a bank statement before approving this application')
+    }
 
     await db
       .update(loanApplications)

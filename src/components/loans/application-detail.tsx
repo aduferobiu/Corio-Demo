@@ -101,7 +101,11 @@ export function ApplicationDetailView({
   const [auditTrailOpen, setAuditTrailOpen] = useState(false)
 
   const bankStatementDocs = documents.filter((d) => d.documentType === 'Bank Statement')
-  const statementsLocked = Boolean(bankAnalysisRunAt)
+  // Once the branch officer has made a decision (or analysis has run), the bank
+  // statement record is final. "queried" is excluded on purpose — a branch officer
+  // may still need to attach an updated statement while a query is outstanding.
+  const statementsLocked =
+    Boolean(bankAnalysisRunAt) || ['with_credit', 'approved', 'rejected', 'declined'].includes(application.status)
   const otherDocs = documents.filter((d) => d.documentType !== 'Bank Statement' && d.documentType !== 'Query Attachment')
   const threadAttachments = documents.filter((d) => d.commentId)
   const employerOrBusiness = application.employmentType === 'self_employed' ? application.businessName : application.employerName

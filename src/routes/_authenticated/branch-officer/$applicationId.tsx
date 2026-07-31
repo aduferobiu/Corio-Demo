@@ -111,9 +111,14 @@ function BranchOfficerApplicationDetail() {
         referenceNumber={data.application.referenceNumber}
         amountRequested={data.application.amountRequested}
         onConfirm={async (notes) => {
-          await approve({ data: { applicationId, notes } })
-          toast.success('Application approved and sent to credit review')
-          navigate({ to: '/branch-officer' })
+          try {
+            await approve({ data: { applicationId, notes } })
+            await router.invalidate()
+            toast.success('Application approved and sent to credit review')
+          } catch (err) {
+            toast.error(err instanceof Error ? err.message : 'Failed to approve application')
+            throw err
+          }
         }}
       />
       <DecisionModal
@@ -126,9 +131,14 @@ function BranchOfficerApplicationDetail() {
         referenceNumber={data.application.referenceNumber}
         amountRequested={data.application.amountRequested}
         onConfirm={async (notes) => {
-          await decline({ data: { applicationId, notes } })
-          toast.success('Application declined')
-          navigate({ to: '/branch-officer' })
+          try {
+            await decline({ data: { applicationId, notes } })
+            await router.invalidate()
+            toast.success('Application declined')
+          } catch (err) {
+            toast.error(err instanceof Error ? err.message : 'Failed to decline application')
+            throw err
+          }
         }}
       />
     </div>

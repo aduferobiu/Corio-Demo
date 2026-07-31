@@ -81,9 +81,14 @@ function CreditOfficerApplicationDetail() {
         amountRequested={data.application.amountRequested}
         riskSummary={`${analysis.riskLevel} Risk · ${analysis.riskLevel === 'Low' ? 'Recommended for approval' : analysis.riskNote}`}
         onConfirm={async (notes) => {
-          await approve({ data: { applicationId, notes } })
-          toast.success('Application approved')
-          navigate({ to: '/credit-officer' })
+          try {
+            await approve({ data: { applicationId, notes } })
+            await router.invalidate()
+            toast.success('Application approved')
+          } catch (err) {
+            toast.error(err instanceof Error ? err.message : 'Failed to approve application')
+            throw err
+          }
         }}
       />
       <DecisionModal
@@ -96,9 +101,14 @@ function CreditOfficerApplicationDetail() {
         referenceNumber={data.application.referenceNumber}
         amountRequested={data.application.amountRequested}
         onConfirm={async (notes) => {
-          await reject({ data: { applicationId, notes } })
-          toast.success('Application declined')
-          navigate({ to: '/credit-officer' })
+          try {
+            await reject({ data: { applicationId, notes } })
+            await router.invalidate()
+            toast.success('Application declined')
+          } catch (err) {
+            toast.error(err instanceof Error ? err.message : 'Failed to decline application')
+            throw err
+          }
         }}
       />
     </div>

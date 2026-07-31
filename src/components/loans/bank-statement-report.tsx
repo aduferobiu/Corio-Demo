@@ -46,14 +46,14 @@ export function BankStatementReport({ application }: { application: ApplicationF
 
       <div className="flex items-stretch gap-6">
         <Card title="Recurring Financial Obligations">
-          <div className="flex flex-col gap-4 divide-y divide-[var(--corio-neutral-100)]">
-            {analysis.obligations.map((o, i) => (
-              <div key={o.title} className={`flex items-center justify-between ${i > 0 ? 'pt-4' : ''}`}>
-                <div className="flex flex-col gap-1">
-                  <p className="text-sm font-medium text-[var(--corio-neutral-900)]">{o.title}</p>
-                  <p className="text-sm text-[var(--corio-neutral-500)]">{o.detail}</p>
+          <div className="flex flex-col gap-3">
+            {analysis.obligations.map((o) => (
+              <div key={o.title} className="flex items-center justify-between gap-4 rounded-xl bg-[var(--corio-neutral-100)] p-4">
+                <div className="flex flex-col gap-0.5">
+                  <p className="text-xs font-medium text-[var(--corio-neutral-900)]">{o.title}</p>
+                  <p className="text-xs text-[var(--corio-neutral-400)]">{o.detail}</p>
                 </div>
-                <p className="shrink-0 text-sm font-medium text-[var(--corio-neutral-900)]">{formatNaira(o.amount)} / month</p>
+                <p className="shrink-0 text-sm font-semibold text-[var(--corio-neutral-900)]">{formatNaira(o.amount)} / Avg</p>
               </div>
             ))}
           </div>

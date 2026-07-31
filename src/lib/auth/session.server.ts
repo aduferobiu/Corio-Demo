@@ -57,7 +57,9 @@ export async function verifyPassword(email: string, password: string): Promise<A
 }
 
 export async function createSession(userId: string) {
-  await db.delete(sessions).where(eq(sessions.userId, userId))
+  // Intentionally does not invalidate this user's other sessions — logging in
+  // from a second tab/device (or as the same demo account elsewhere) shouldn't
+  // silently log out an already-open session.
   const token = crypto.randomUUID()
   await db.insert(sessions).values({ id: token, userId, expiresAt: new Date(Date.now() + SESSION_TTL_MS) })
   await db.update(users).set({ status: 'active', lastActivityAt: new Date() }).where(eq(users.id, userId))

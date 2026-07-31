@@ -13,7 +13,7 @@ export const ROLE_DASHBOARD_HOME: Record<Role, string> = {
 // Where the "Loan" sidebar item sends each role (their application list / queue).
 export const ROLE_LOAN_HOME: Record<Role, string> = {
   loan_officer: '/loan-officer',
-  branch_officer: '/branch-officer',
+  branch_officer: '/branch-officer/loan',
   credit_officer: '/credit-officer',
   md: '/md',
   admin: '/loan-officer',
