@@ -6,7 +6,7 @@ import { loanApplications, users } from '#/db/schema'
 import { requireRole } from '#/lib/auth/middleware'
 
 export const getLoanOfficerDashboardFn = createServerFn({ method: 'GET' })
-  .middleware([requireRole('loan_officer')])
+  .middleware([requireRole('loan_officer', 'admin')])
   .handler(async ({ context }) => {
     const applications = await db
       .select()

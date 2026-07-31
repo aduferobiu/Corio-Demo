@@ -6,7 +6,8 @@ export const ROLE_DASHBOARD_HOME: Record<Role, string> = {
   branch_officer: '/branch-officer',
   credit_officer: '/credit-officer/dashboard',
   md: '/md',
-  admin: '/coming-soon',
+  // Admin gets the same loan-officer-style experience (own application list + create).
+  admin: '/loan-officer/dashboard',
 }
 
 // Where the "Loan" sidebar item sends each role (their application list / queue).
@@ -15,7 +16,7 @@ export const ROLE_LOAN_HOME: Record<Role, string> = {
   branch_officer: '/branch-officer',
   credit_officer: '/credit-officer',
   md: '/md',
-  admin: '/coming-soon',
+  admin: '/loan-officer',
 }
 
 // Where each role's per-application detail view lives — used to build links to a
@@ -25,5 +26,5 @@ export const ROLE_APPLICATION_DETAIL: Record<Role, (applicationId: string) => st
   branch_officer: (id) => `/branch-officer/${id}`,
   credit_officer: (id) => `/credit-officer/${id}`,
   md: (id) => `/md/${id}`,
-  admin: (id) => `/md/${id}`,
+  admin: (id) => `/loan-officer/${id}`,
 }

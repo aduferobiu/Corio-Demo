@@ -69,25 +69,24 @@ export const getCompanyDocumentFn = createServerFn({ method: 'GET' })
       .limit(1)
     if (!row) throw new Error('Not found')
 
-    let approverName: string | null = null
-    if (row.doc.approvedByUserId) {
-      const [approver] = await db.select().from(users).where(eq(users.id, row.doc.approvedByUserId)).limit(1)
-      approverName = approver?.name ?? null
-    }
-
-    const versions = await db
-      .select({ version: companyDocumentVersions, uploader: users })
-      .from(companyDocumentVersions)
-      .innerJoin(users, eq(users.id, companyDocumentVersions.uploadedByUserId))
-      .where(eq(companyDocumentVersions.documentId, data.id))
-      .orderBy(desc(companyDocumentVersions.version))
-
-    const activity = await db
-      .select({ entry: companyDocumentActivity, actor: users })
-      .from(companyDocumentActivity)
-      .innerJoin(users, eq(users.id, companyDocumentActivity.actorUserId))
-      .where(eq(companyDocumentActivity.documentId, data.id))
-      .orderBy(desc(companyDocumentActivity.createdAt))
+    const [approver, versions, activity] = await Promise.all([
+      row.doc.approvedByUserId
+        ? db.select().from(users).where(eq(users.id, row.doc.approvedByUserId)).limit(1)
+        : Promise.resolve([]),
+      db
+        .select({ version: companyDocumentVersions, uploader: users })
+        .from(companyDocumentVersions)
+        .innerJoin(users, eq(users.id, companyDocumentVersions.uploadedByUserId))
+        .where(eq(companyDocumentVersions.documentId, data.id))
+        .orderBy(desc(companyDocumentVersions.version)),
+      db
+        .select({ entry: companyDocumentActivity, actor: users })
+        .from(companyDocumentActivity)
+        .innerJoin(users, eq(users.id, companyDocumentActivity.actorUserId))
+        .where(eq(companyDocumentActivity.documentId, data.id))
+        .orderBy(desc(companyDocumentActivity.createdAt)),
+    ])
+    const approverName = approver[0]?.name ?? null
 
     return {
       document: { ...row.doc, ownerName: row.owner.name, approverName },

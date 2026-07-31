@@ -28,23 +28,25 @@ export const getApplicationFn = createServerFn({ method: 'GET' })
   .handler(async ({ context, data }) => {
     const [application] = await db.select().from(loanApplications).where(eq(loanApplications.id, data.id)).limit(1)
     if (!application) throw new Error('Not found')
-    if (context.user.role === 'loan_officer' && application.createdByUserId !== context.user.id) throw new Error('Not found')
+    if (['loan_officer', 'admin'].includes(context.user.role) && application.createdByUserId !== context.user.id) {
+      throw new Error('Not found')
+    }
 
-    const applicationComments = await db
-      .select({ comment: comments, author: users })
-      .from(comments)
-      .innerJoin(users, eq(users.id, comments.authorUserId))
-      .where(eq(comments.loanApplicationId, application.id))
-      .orderBy(comments.createdAt)
-
-    const applicationDocuments = await db.select().from(documents).where(eq(documents.loanApplicationId, application.id))
-
-    const history = await db
-      .select({ entry: loanStatusHistory, actor: users })
-      .from(loanStatusHistory)
-      .innerJoin(users, eq(users.id, loanStatusHistory.actorUserId))
-      .where(eq(loanStatusHistory.loanApplicationId, application.id))
-      .orderBy(loanStatusHistory.createdAt)
+    const [applicationComments, applicationDocuments, history] = await Promise.all([
+      db
+        .select({ comment: comments, author: users })
+        .from(comments)
+        .innerJoin(users, eq(users.id, comments.authorUserId))
+        .where(eq(comments.loanApplicationId, application.id))
+        .orderBy(comments.createdAt),
+      db.select().from(documents).where(eq(documents.loanApplicationId, application.id)),
+      db
+        .select({ entry: loanStatusHistory, actor: users })
+        .from(loanStatusHistory)
+        .innerJoin(users, eq(users.id, loanStatusHistory.actorUserId))
+        .where(eq(loanStatusHistory.loanApplicationId, application.id))
+        .orderBy(loanStatusHistory.createdAt),
+    ])
 
     return {
       application,
@@ -102,7 +104,7 @@ const applicantSchema = z.object({
 })
 
 export const createApplicationFn = createServerFn({ method: 'POST' })
-  .middleware([requireRole('loan_officer')])
+  .middleware([requireRole('loan_officer', 'admin')])
   .validator((formData: unknown) => {
     if (!(formData instanceof FormData)) throw new Error('Expected FormData')
     const raw = Object.fromEntries(formData.entries())
@@ -237,7 +239,9 @@ export const postQueryMessageFn = createServerFn({ method: 'POST' })
   .handler(async ({ context, data }) => {
     const [application] = await db.select().from(loanApplications).where(eq(loanApplications.id, data.applicationId)).limit(1)
     if (!application) throw new Error('Not found')
-    if (context.user.role === 'loan_officer' && application.createdByUserId !== context.user.id) throw new Error('Not found')
+    if (['loan_officer', 'admin'].includes(context.user.role) && application.createdByUserId !== context.user.id) {
+      throw new Error('Not found')
+    }
     if (['approved', 'rejected', 'declined'].includes(application.status)) {
       throw new Error('A decision has already been made on this application')
     }

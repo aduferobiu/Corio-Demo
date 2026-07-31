@@ -1,13 +1,24 @@
 import bcrypt from 'bcryptjs'
 
 import { db } from './client'
-import { comments, companyDocumentActivity, companyDocumentVersions, companyDocuments, customers, documents, loanApplications, users } from './schema'
+import {
+  comments,
+  companyDocumentActivity,
+  companyDocumentVersions,
+  companyDocuments,
+  customers,
+  documents,
+  loanApplications,
+  notifications,
+  users,
+} from './schema'
 
 const DEMO_PASSWORDS = {
   loan_officer: '12345',
   branch_officer: '12345',
   credit_officer: '12345',
   md: '12345',
+  admin: '12345',
 } as const
 
 // Minimal, valid single-page PDFs generated for this demo — not real documents.
@@ -21,20 +32,22 @@ const COMPANY_DOC_PDF =
   'data:application/pdf;base64,JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvUmVzb3VyY2VzIDw8IC9Gb250IDw8IC9GMSA0IDAgUiA+PiA+PiAvTWVkaWFCb3ggWzAgMCA2MTIgNzkyXSAvQ29udGVudHMgNSAwIFIgPj4KZW5kb2JqCjQgMCBvYmoKPDwgL1R5cGUgL0ZvbnQgL1N1YnR5cGUgL1R5cGUxIC9CYXNlRm9udCAvSGVsdmV0aWNhID4+CmVuZG9iago1IDAgb2JqCjw8IC9MZW5ndGggMTY3ID4+CnN0cmVhbQpCVCAvRjEgMjAgVGYgNzIgNzAwIFRkIChDT01QQU5ZIERPQ1VNRU5UKSBUaiBFVApCVCAvRjEgMTIgVGYgNzIgNjYwIFRkIChDb3JpbyBNaWNyb2ZpbmFuY2UgQmFuaykgVGogRVQKQlQgL0YxIDEyIFRmIDcyIDYzOCBUZCAoU2FtcGxlIGRvY3VtZW50IGZvciBkZW1vIHB1cnBvc2VzKSBUaiBFVAplbmRzdHJlYW0KZW5kb2JqCnhyZWYKMCA2CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAwOSAwMDAwMCBuIAowMDAwMDAwMDU4IDAwMDAwIG4gCjAwMDAwMDAxMTUgMDAwMDAgbiAKMDAwMDAwMDI0MSAwMDAwMCBuIAowMDAwMDAwMzExIDAwMDAwIG4gCnRyYWlsZXIKPDwgL1NpemUgNiAvUm9vdCAxIDAgUiA+PgpzdGFydHhyZWYKNTI5CiUlRU9G'
 
 async function seed() {
-  const [loanOfficerHash, branchOfficerHash, creditOfficerHash, mdHash] = await Promise.all([
+  const [loanOfficerHash, branchOfficerHash, creditOfficerHash, mdHash, adminHash] = await Promise.all([
     bcrypt.hash(DEMO_PASSWORDS.loan_officer, 10),
     bcrypt.hash(DEMO_PASSWORDS.branch_officer, 10),
     bcrypt.hash(DEMO_PASSWORDS.credit_officer, 10),
     bcrypt.hash(DEMO_PASSWORDS.md, 10),
+    bcrypt.hash(DEMO_PASSWORDS.admin, 10),
   ])
 
-  const [loanOfficer, branchOfficer, creditOfficer, md] = await db
+  const [loanOfficer, branchOfficer, creditOfficer, md, admin] = await db
     .insert(users)
     .values([
       { name: 'Chidinma Okafor', email: 'loan.officer@corio.demo', passwordHash: loanOfficerHash, role: 'loan_officer', branch: 'Lagos Mainland' },
       { name: 'Emeka Nwosu', email: 'branch.officer@corio.demo', passwordHash: branchOfficerHash, role: 'branch_officer', branch: 'Lagos Mainland' },
       { name: 'Amaka Bello', email: 'credit.officer@corio.demo', passwordHash: creditOfficerHash, role: 'credit_officer', branch: 'Lagos Mainland' },
       { name: 'Tunde Adebayo', email: 'md@corio.demo', passwordHash: mdHash, role: 'md', branch: null },
+      { name: 'Ada Okonkwo', email: 'admin@corio.demo', passwordHash: adminHash, role: 'admin', branch: null },
     ])
     .returning()
 
@@ -464,11 +477,114 @@ I'll chase the updated statement and get back to you as soon as I have it.`,
     })),
   )
 
+  await db.insert(notifications).values([
+    {
+      userId: loanOfficer.id,
+      type: 'query_raised',
+      title: 'New query on your application',
+      body: `Emeka Nwosu raised a query on ${appQueried.referenceNumber} — Segun Balogun`,
+      link: `/loan-officer/${appQueried.id}`,
+      read: false,
+      createdAt: hoursAgo(30),
+    },
+    {
+      userId: loanOfficer.id,
+      type: 'loan_activity',
+      title: 'Application sent to credit review',
+      body: `${appWithCredit.referenceNumber} — Chukwuemeka Eze was approved by the branch and is now with credit`,
+      link: `/loan-officer/${appWithCredit.id}`,
+      read: true,
+      createdAt: hoursAgo(3),
+    },
+    {
+      userId: loanOfficer.id,
+      type: 'loan_activity',
+      title: 'Application approved',
+      body: `${appApproved.referenceNumber} — Fatima Suleiman was approved by credit review`,
+      link: `/loan-officer/${appApproved.id}`,
+      read: true,
+      createdAt: hoursAgo(24),
+    },
+    {
+      userId: loanOfficer.id,
+      type: 'loan_activity',
+      title: 'Application rejected',
+      body: `${appRejected.referenceNumber} — Ngozi Obi was rejected by credit review`,
+      link: `/loan-officer/${appRejected.id}`,
+      read: true,
+      createdAt: hoursAgo(20),
+    },
+    {
+      userId: loanOfficer.id,
+      type: 'loan_activity',
+      title: 'Application declined',
+      body: `${appDeclined.referenceNumber} — Ibrahim Musa was declined by the branch`,
+      link: `/loan-officer/${appDeclined.id}`,
+      read: false,
+      createdAt: hoursAgo(96),
+    },
+    {
+      userId: branchOfficer.id,
+      type: 'query_response',
+      title: 'Reply posted to your query',
+      body: `Chidinma Okafor responded to your query on ${appQueried.referenceNumber} — Segun Balogun`,
+      link: `/branch-officer/${appQueried.id}`,
+      read: false,
+      createdAt: hoursAgo(29),
+    },
+    {
+      userId: branchOfficer.id,
+      type: 'loan_activity',
+      title: 'New application awaiting your review',
+      body: `${appSubmitted.referenceNumber} — Bisi Adeyemi was submitted and is awaiting branch review`,
+      link: `/branch-officer/${appSubmitted.id}`,
+      read: false,
+      createdAt: hoursAgo(2),
+    },
+    {
+      userId: creditOfficer.id,
+      type: 'loan_activity',
+      title: 'Application awaiting credit review',
+      body: `${appWithCredit.referenceNumber} — Chukwuemeka Eze is now awaiting credit review`,
+      link: `/credit-officer/${appWithCredit.id}`,
+      read: false,
+      createdAt: hoursAgo(3),
+    },
+    {
+      userId: creditOfficer.id,
+      type: 'document_decision',
+      title: 'Document approved',
+      body: '"Loan Policy Manual" was approved',
+      link: '/documents',
+      read: true,
+      createdAt: hoursAgo(50),
+    },
+    {
+      userId: md.id,
+      type: 'document_upload_request',
+      title: 'Document awaiting your approval',
+      body: 'Emeka Nwosu uploaded "Branch Compliance Checklist" and it needs your approval',
+      link: '/documents',
+      read: false,
+      createdAt: hoursAgo(1),
+    },
+    {
+      userId: md.id,
+      type: 'loan_activity',
+      title: 'High-value application rejected',
+      body: `${appRejected.referenceNumber} — Ngozi Obi (₦800,000) was rejected by credit review`,
+      link: `/md/${appRejected.id}`,
+      read: true,
+      createdAt: hoursAgo(20),
+    },
+  ])
+
   console.log('Seeded users and passwords:', {
     loanOfficer: { email: loanOfficer.email, password: DEMO_PASSWORDS.loan_officer },
     branchOfficer: { email: branchOfficer.email, password: DEMO_PASSWORDS.branch_officer },
     creditOfficer: { email: creditOfficer.email, password: DEMO_PASSWORDS.credit_officer },
     md: { email: md.email, password: DEMO_PASSWORDS.md },
+    admin: { email: admin.email, password: DEMO_PASSWORDS.admin },
   })
   console.log(
     'Seeded applications:',
