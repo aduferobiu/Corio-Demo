@@ -42,7 +42,7 @@ export function DashboardDateFilter({
               className={
                 'rounded-md px-3 py-1 text-sm font-medium transition-colors ' +
                 (active
-                  ? 'bg-[var(--corio-neutral-100)] text-[var(--corio-neutral-900)]'
+                  ? 'bg-[var(--corio-neutral-900)] text-white'
                   : 'text-[var(--corio-neutral-400)] hover:text-[var(--corio-neutral-600)]')
               }
             >

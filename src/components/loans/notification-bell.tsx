@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useServerFn } from '@tanstack/react-start'
-import { Bell, FileCheck2, FileUp, MessageSquareText, TrendingUp } from 'lucide-react'
+import { Bell } from 'lucide-react'
 
+import { usePoll } from '#/lib/hooks/use-poll'
 import { formatElapsed } from '#/lib/loans/format'
+import { NOTIFICATION_ICONS } from '#/lib/notifications/notification-icons'
 import {
   listNotificationsFn,
   markAllNotificationsReadFn,
@@ -12,14 +14,6 @@ import {
 import { cn } from '#/lib/utils'
 
 type Notification = Awaited<ReturnType<typeof listNotificationsFn>>[number]
-
-const ICONS: Record<Notification['type'], typeof MessageSquareText> = {
-  query_raised: MessageSquareText,
-  query_response: MessageSquareText,
-  document_upload_request: FileUp,
-  document_decision: FileCheck2,
-  loan_activity: TrendingUp,
-}
 
 export function NotificationBell() {
   const navigate = useNavigate()
@@ -34,6 +28,10 @@ export function NotificationBell() {
   useEffect(() => {
     listNotifications().then(setItems)
   }, [])
+
+  usePoll(() => {
+    listNotifications().then(setItems)
+  }, 5000)
 
   const unreadCount = items.filter((n) => !n.read).length
   const visible = tab === 'unread' ? items.filter((n) => !n.read) : items
@@ -90,7 +88,7 @@ export function NotificationBell() {
                 </p>
               ) : (
                 visible.map((notification) => {
-                  const Icon = ICONS[notification.type]
+                  const Icon = NOTIFICATION_ICONS[notification.type]
                   return (
                     <button
                       key={notification.id}
