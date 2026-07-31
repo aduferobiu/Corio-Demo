@@ -1,4 +1,4 @@
-import { CheckCircle2, ShieldCheck } from 'lucide-react'
+import { CheckCircle2, Info } from 'lucide-react'
 
 import { analyzeBankStatement } from '#/lib/loans/bank-analysis'
 import { formatNaira } from '#/lib/loans/format'
@@ -60,12 +60,19 @@ export function BankStatementReport({ application }: { application: ApplicationF
         </Card>
 
         <Card title="Behavioural Flags">
-          <div className="flex items-start gap-2 rounded-xl bg-[var(--corio-green-100)] p-4">
-            <ShieldCheck className="mt-0.5 size-5 shrink-0 text-[var(--corio-green-600)]" />
-            <div className="flex flex-col gap-0.5">
-              <p className="text-sm font-medium text-[var(--corio-green-600)]">
-                {analysis.behaviouralFlagsClear ? 'No adverse flags detected' : 'Review recommended'}
+          <div
+            className={`flex items-start gap-3 rounded-xl p-3.5 ${analysis.behaviouralFlagsClear ? 'bg-[#ebf1ff]' : 'bg-[var(--corio-red-light)]'}`}
+          >
+            <div
+              className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full ${analysis.behaviouralFlagsClear ? 'bg-[var(--corio-blue-500)]' : 'bg-destructive'}`}
+            >
+              <Info className="size-3.5 text-white" />
+            </div>
+            <div className="flex flex-col gap-1">
+              <p className="text-sm font-medium text-[var(--corio-neutral-900)]">
+                {analysis.behaviouralFlagsClear ? 'None detected' : 'Review recommended'}
               </p>
+              <p className="text-sm text-[var(--corio-neutral-600)]">{analysis.behaviouralFlagsNote}</p>
             </div>
           </div>
           <p className="text-xs text-[var(--corio-neutral-500)]">

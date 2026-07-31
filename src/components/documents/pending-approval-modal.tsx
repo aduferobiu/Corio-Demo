@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { FileText, X } from 'lucide-react'
 
 import { Button } from '#/components/ui/button'
+import { DocumentPreviewModal } from '#/components/documents/document-preview-modal'
 import { formatDate, formatTime } from '#/lib/loans/format'
 
 type PendingDoc = {
@@ -11,6 +12,7 @@ type PendingDoc = {
   updatedAt: Date
   latestFileName: string | null
   latestDataUrl: string | null
+  latestMimeType: string | null
   latestFileSize: number | null
 }
 
@@ -37,6 +39,7 @@ export function PendingApprovalModal({
 }) {
   const [busyId, setBusyId] = useState<string | null>(null)
   const [bulkBusy, setBulkBusy] = useState(false)
+  const [previewDoc, setPreviewDoc] = useState<PendingDoc | null>(null)
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
 
   if (!open) return null
@@ -69,9 +72,13 @@ export function PendingApprovalModal({
                   </div>
                 </div>
                 {doc.latestDataUrl && (
-                  <a href={doc.latestDataUrl} target="_blank" rel="noreferrer" className="shrink-0 text-xs font-medium text-[var(--corio-neutral-500)] underline">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewDoc(doc)}
+                    className="shrink-0 text-xs font-medium text-[var(--corio-neutral-500)] underline"
+                  >
                     Preview
-                  </a>
+                  </button>
                 )}
               </div>
 
@@ -194,6 +201,15 @@ export function PendingApprovalModal({
           </div>
         )}
       </div>
+
+      {previewDoc && (
+        <DocumentPreviewModal
+          name={previewDoc.name}
+          dataUrl={previewDoc.latestDataUrl}
+          mimeType={previewDoc.latestMimeType}
+          onClose={() => setPreviewDoc(null)}
+        />
+      )}
     </div>
   )
 }

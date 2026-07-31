@@ -1,22 +1,28 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 
+import { InitialsAvatar } from '#/components/initials-avatar'
 import { AppHeader } from '#/components/loans/app-header'
+import { DashboardDateFilter } from '#/components/loans/dashboard-date-filter'
 import { Sidebar } from '#/components/loans/sidebar'
 import { StatCard } from '#/components/loans/stat-card'
 import { StatusBadge, type LoanStatus } from '#/components/loans/status-badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '#/components/ui/table'
 import { getCreditOfficerDashboardFn } from '#/lib/loans/dashboard.functions'
+import { validateDashboardRangeSearch } from '#/lib/loans/date-range'
 import { formatElapsed, formatHours, formatNaira, formatTime } from '#/lib/loans/format'
 
 export const Route = createFileRoute('/_authenticated/credit-officer/dashboard')({
-  loader: () => getCreditOfficerDashboardFn(),
+  validateSearch: validateDashboardRangeSearch,
+  loaderDeps: ({ search }) => search,
+  loader: ({ deps }) => getCreditOfficerDashboardFn({ data: deps }),
   component: CreditOfficerDashboard,
 })
 
 function CreditOfficerDashboard() {
   const data = Route.useLoaderData()
   const { user } = Route.useRouteContext()
-  const navigate = useNavigate()
+  const search = Route.useSearch()
+  const navigate = Route.useNavigate()
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -24,6 +30,8 @@ function CreditOfficerDashboard() {
       <div className="flex flex-1 flex-col overflow-hidden">
         <AppHeader title="Dashboard" />
         <main className="flex flex-1 flex-col gap-6 overflow-y-auto px-8 py-6">
+          <DashboardDateFilter value={search} onChange={(next) => navigate({ search: () => next, replace: true })} />
+
           <div className="flex items-stretch gap-6">
             <StatCard label="Awaiting Your Review" value={String(data.awaitingReview.length)} highlight={data.awaitingReview.length > 0} />
             <StatCard label="Approved This Month" value={String(data.approvedThisMonth)} />
@@ -59,13 +67,7 @@ function CreditOfficerDashboard() {
                     >
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[var(--corio-neutral-100)] text-xs font-medium text-[var(--corio-neutral-600)]">
-                            {app.applicantName
-                              .split(' ')
-                              .map((p) => p[0])
-                              .slice(0, 2)
-                              .join('')}
-                          </div>
+                          <InitialsAvatar name={app.applicantName} className="size-8 text-xs font-medium" />
                           <span className="text-sm font-medium text-[var(--corio-neutral-800)]">{app.applicantName}</span>
                         </div>
                       </TableCell>

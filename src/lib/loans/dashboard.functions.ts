@@ -1,17 +1,27 @@
-import { desc, eq } from 'drizzle-orm'
+import { and, desc, eq, gte, lte } from 'drizzle-orm'
 import { createServerFn } from '@tanstack/react-start'
+import { z } from 'zod'
 
 import { db } from '#/db/client'
 import { loanApplications, users } from '#/db/schema'
 import { requireRole } from '#/lib/auth/middleware'
+import { DASHBOARD_RANGE_PRESETS, resolveDashboardRange } from '#/lib/loans/date-range'
+
+const dashboardRangeValidator = z.object({
+  range: z.enum(DASHBOARD_RANGE_PRESETS).optional(),
+  from: z.string().optional(),
+  to: z.string().optional(),
+})
 
 export const getLoanOfficerDashboardFn = createServerFn({ method: 'GET' })
   .middleware([requireRole('loan_officer', 'admin')])
-  .handler(async ({ context }) => {
+  .validator(dashboardRangeValidator)
+  .handler(async ({ context, data }) => {
+    const { from, to } = resolveDashboardRange(data)
     const applications = await db
       .select()
       .from(loanApplications)
-      .where(eq(loanApplications.createdByUserId, context.user.id))
+      .where(and(eq(loanApplications.createdByUserId, context.user.id), gte(loanApplications.createdAt, from), lte(loanApplications.createdAt, to)))
       .orderBy(desc(loanApplications.updatedAt))
 
     const openQueries = applications.filter((a) => a.status === 'queried').sort((a, b) => a.updatedAt.getTime() - b.updatedAt.getTime())
@@ -29,8 +39,13 @@ export const getLoanOfficerDashboardFn = createServerFn({ method: 'GET' })
 
 export const getCreditOfficerDashboardFn = createServerFn({ method: 'GET' })
   .middleware([requireRole('credit_officer')])
-  .handler(async ({ context }) => {
-    const applications = await db.select().from(loanApplications)
+  .validator(dashboardRangeValidator)
+  .handler(async ({ context, data }) => {
+    const { from, to } = resolveDashboardRange(data)
+    const applications = await db
+      .select()
+      .from(loanApplications)
+      .where(and(gte(loanApplications.createdAt, from), lte(loanApplications.createdAt, to)))
 
     const now = new Date()
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
@@ -61,13 +76,16 @@ export const getCreditOfficerDashboardFn = createServerFn({ method: 'GET' })
 // Shared by MD (all branches) and branch officer (own branch only).
 export const getManagementDashboardFn = createServerFn({ method: 'GET' })
   .middleware([requireRole('md', 'branch_officer')])
-  .handler(async ({ context }) => {
+  .validator(dashboardRangeValidator)
+  .handler(async ({ context, data }) => {
     const branchFilter = context.user.role === 'branch_officer' ? context.user.branch : undefined
+    const { from, to } = resolveDashboardRange(data)
 
     const rows = await db
       .select({ app: loanApplications, officer: users })
       .from(loanApplications)
       .leftJoin(users, eq(users.id, loanApplications.createdByUserId))
+      .where(and(gte(loanApplications.createdAt, from), lte(loanApplications.createdAt, to)))
 
     const scoped = branchFilter ? rows.filter((r) => r.app.branch === branchFilter) : rows
 

@@ -1,23 +1,29 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { AlertTriangle } from 'lucide-react'
 
+import { InitialsAvatar } from '#/components/initials-avatar'
 import { AppHeader } from '#/components/loans/app-header'
+import { DashboardDateFilter } from '#/components/loans/dashboard-date-filter'
 import { Sidebar } from '#/components/loans/sidebar'
 import { StatCard } from '#/components/loans/stat-card'
 import { StatusBadge, type LoanStatus } from '#/components/loans/status-badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '#/components/ui/table'
 import { getLoanOfficerDashboardFn } from '#/lib/loans/dashboard.functions'
+import { validateDashboardRangeSearch } from '#/lib/loans/date-range'
 import { formatElapsed, formatNaira } from '#/lib/loans/format'
 
 export const Route = createFileRoute('/_authenticated/loan-officer/dashboard')({
-  loader: () => getLoanOfficerDashboardFn(),
+  validateSearch: validateDashboardRangeSearch,
+  loaderDeps: ({ search }) => search,
+  loader: ({ deps }) => getLoanOfficerDashboardFn({ data: deps }),
   component: LoanOfficerDashboard,
 })
 
 function LoanOfficerDashboard() {
   const data = Route.useLoaderData()
   const { user } = Route.useRouteContext()
-  const navigate = useNavigate()
+  const search = Route.useSearch()
+  const navigate = Route.useNavigate()
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -25,6 +31,8 @@ function LoanOfficerDashboard() {
       <div className="flex flex-1 flex-col overflow-hidden">
         <AppHeader title="Dashboard" />
         <main className="flex flex-1 flex-col gap-6 overflow-y-auto px-8 py-6">
+          <DashboardDateFilter value={search} onChange={(next) => navigate({ search: () => next, replace: true })} />
+
           {data.openQueries.length > 0 && (
             <div className="flex items-start gap-3 rounded-2xl bg-[var(--corio-blue-light)]/40 p-4">
               <AlertTriangle className="mt-0.5 size-5 shrink-0 text-[var(--corio-blue-darker)]" />
@@ -85,13 +93,7 @@ function LoanOfficerDashboard() {
                   >
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[var(--corio-neutral-100)] text-xs font-medium text-[var(--corio-neutral-600)]">
-                          {app.applicantName
-                            .split(' ')
-                            .map((p) => p[0])
-                            .slice(0, 2)
-                            .join('')}
-                        </div>
+                        <InitialsAvatar name={app.applicantName} className="size-8 text-xs font-medium" />
                         <span className="text-sm font-medium text-[var(--corio-neutral-800)]">{app.applicantName}</span>
                       </div>
                     </TableCell>

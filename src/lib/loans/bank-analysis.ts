@@ -14,7 +14,9 @@ export function analyzeBankStatement(application: LoanApplication) {
   const surplus = inflow - outflow
 
   const existingRepayment = Math.round(income * 0.12)
-  const utilities = Math.round(income * 0.06)
+  const utilitiesAndSubscriptions = Math.round(income * 0.06)
+  const utilities = Math.round(utilitiesAndSubscriptions * 0.6)
+  const subscriptions = utilitiesAndSubscriptions - utilities
 
   const surplusRatio = surplus / income
   const riskLevel: 'Low' | 'Medium' | 'High' = surplusRatio > 0.2 ? 'Low' : surplusRatio > 0.05 ? 'Medium' : 'High'
@@ -27,17 +29,21 @@ export function analyzeBankStatement(application: LoanApplication) {
     netMonthlySurplus: surplus,
     obligations: [
       {
-        title: 'Existing loan repayment',
-        detail: 'Standing order · debited monthly',
-        amount: existingRepayment,
+        title: 'Utilities',
+        detail: 'Electricity, internet and mobile · consistent across all 12 months',
+        amount: utilities,
       },
       {
-        title: 'Utilities & subscriptions',
-        detail: 'Electricity, internet and mobile · consistent across all months reviewed',
-        amount: utilities,
+        title: 'Subscriptions',
+        detail: 'Netflix, Youtube · consistent across all 12 months',
+        amount: subscriptions,
       },
     ],
     behaviouralFlagsClear: riskLevel !== 'High',
+    behaviouralFlagsNote:
+      riskLevel !== 'High'
+        ? 'Account activity is consistent and regular across the review period.'
+        : 'Irregular account activity was observed during the review period — closer review recommended.',
     keyFindings: [
       `Stable, verifiable ${application.employmentType === 'self_employed' ? 'business' : 'salary'} income over the review period`,
       `Net monthly surplus of ${formatNairaShort(surplus)} after all recurring commitments`,

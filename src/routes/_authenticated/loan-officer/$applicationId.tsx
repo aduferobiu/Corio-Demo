@@ -5,7 +5,9 @@ import { toast } from 'sonner'
 import { AppHeader } from '#/components/loans/app-header'
 import { ApplicationDetailView } from '#/components/loans/application-detail'
 import { Sidebar } from '#/components/loans/sidebar'
+import { usePoll } from '#/lib/hooks/use-poll'
 import { getApplicationFn, postQueryMessageFn } from '#/lib/loans/loans.functions'
+import { markQueryNotificationsReadFn } from '#/lib/notifications/notifications.functions'
 
 export const Route = createFileRoute('/_authenticated/loan-officer/$applicationId')({
   loader: ({ params }) => getApplicationFn({ data: { id: params.applicationId } }),
@@ -19,7 +21,10 @@ function LoanOfficerApplicationDetail() {
   const navigate = useNavigate()
   const router = useRouter()
   const postQueryMessage = useServerFn(postQueryMessageFn)
+  const markQueryRead = useServerFn(markQueryNotificationsReadFn)
   const isDecided = ['approved', 'rejected', 'declined'].includes(data.application.status)
+
+  usePoll(() => router.invalidate(), 5000)
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -42,6 +47,12 @@ function LoanOfficerApplicationDetail() {
             toast.success('Message sent')
           }}
           bankStatementReportHref={`/loan-officer/${applicationId}/bank-statement`}
+          hasUnreadQuery={data.hasUnreadQuery}
+          onOpenQueryThread={async () => {
+            if (!data.hasUnreadQuery) return
+            await markQueryRead({ data: { applicationId } })
+            await router.invalidate()
+          }}
         />
       </div>
     </div>

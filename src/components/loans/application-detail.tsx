@@ -7,6 +7,7 @@ import { AuditTrailPanel } from '#/components/loans/audit-trail-panel'
 import { BankStatementUploadModal } from '#/components/loans/bank-statement-upload-modal'
 import { ContentField } from '#/components/loans/content-field'
 import { QueryThreadPanel } from '#/components/loans/query-thread'
+import { InitialsAvatar } from '#/components/initials-avatar'
 import { StatusBadge, type LoanStatus } from '#/components/loans/status-badge'
 import { formatEmploymentType, formatLoanType, formatNaira, formatQueueDuration } from '#/lib/loans/format'
 
@@ -81,6 +82,8 @@ export function ApplicationDetailView({
   onUploadBankStatement,
   onDeleteBankStatement,
   auditTrail,
+  hasUnreadQuery,
+  onOpenQueryThread,
 }: {
   application: ApplicationRow
   comments: ThreadComment[]
@@ -95,6 +98,8 @@ export function ApplicationDetailView({
   onUploadBankStatement?: (file: File) => Promise<void>
   onDeleteBankStatement?: (documentId: string) => Promise<void>
   auditTrail?: AuditEntry[]
+  hasUnreadQuery?: boolean
+  onOpenQueryThread?: () => void
 }) {
   const [queryOpen, setQueryOpen] = useState(false)
   const [uploadStatementOpen, setUploadStatementOpen] = useState(false)
@@ -141,21 +146,29 @@ export function ApplicationDetailView({
               <History className="size-4.5" />
             </button>
           )}
-          <Button variant="outline" size="sm" className="h-9" onClick={() => setQueryOpen((v) => !v)}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="relative h-9"
+            onClick={() => {
+              setQueryOpen((v) => {
+                const next = !v
+                if (next) onOpenQueryThread?.()
+                return next
+              })
+            }}
+          >
             View Query
+            {hasUnreadQuery && (
+              <span className="absolute -top-1 -right-1 size-2.5 rounded-full bg-destructive ring-2 ring-white" />
+            )}
           </Button>
           {headerActions}
         </div>
       </div>
 
       <div className="mt-6 flex items-start gap-4 rounded-xl border border-[var(--corio-neutral-200)] bg-white p-4">
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[var(--corio-neutral-100)] text-sm font-semibold text-[var(--corio-neutral-600)]">
-          {application.applicantName
-            .split(' ')
-            .map((p) => p[0])
-            .slice(0, 2)
-            .join('')}
-        </div>
+        <InitialsAvatar name={application.applicantName} className="size-10 text-sm font-semibold" />
         <div className="flex flex-col gap-0.5">
           <div className="flex items-center gap-2">
             <span className="text-sm font-semibold text-[var(--corio-neutral-800)]">{application.applicantName}</span>

@@ -1,10 +1,11 @@
-import { desc, eq } from 'drizzle-orm'
+import { and, desc, eq, like, or } from 'drizzle-orm'
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
 import { db } from '#/db/client'
-import { comments, customers, documents, loanApplications, loanStatusHistory, users } from '#/db/schema'
+import { comments, customers, documents, loanApplications, loanStatusHistory, notifications, users } from '#/db/schema'
 import { authMiddleware, requireRole } from '#/lib/auth/middleware'
+import { ROLE_APPLICATION_DETAIL } from '#/lib/auth/role-routes'
 
 function generateReferenceNumber() {
   const year = new Date().getFullYear()
@@ -34,6 +35,14 @@ export const listBranchApplicationsFn = createServerFn({ method: 'GET' })
       .orderBy(desc(loanApplications.createdAt))
   })
 
+// MD sees every application company-wide (read-only, sorted by most recently
+// active so "time at stage" is meaningful).
+export const listAllApplicationsFn = createServerFn({ method: 'GET' })
+  .middleware([requireRole('md')])
+  .handler(async () => {
+    return db.select().from(loanApplications).orderBy(desc(loanApplications.updatedAt))
+  })
+
 export const getApplicationFn = createServerFn({ method: 'GET' })
   .middleware([authMiddleware])
   .validator(z.object({ id: z.string() }))
@@ -44,7 +53,7 @@ export const getApplicationFn = createServerFn({ method: 'GET' })
       throw new Error('Not found')
     }
 
-    const [applicationComments, applicationDocuments, history] = await Promise.all([
+    const [applicationComments, applicationDocuments, history, unreadQueryNotifications] = await Promise.all([
       db
         .select({ comment: comments, author: users })
         .from(comments)
@@ -58,6 +67,18 @@ export const getApplicationFn = createServerFn({ method: 'GET' })
         .innerJoin(users, eq(users.id, loanStatusHistory.actorUserId))
         .where(eq(loanStatusHistory.loanApplicationId, application.id))
         .orderBy(loanStatusHistory.createdAt),
+      db
+        .select({ id: notifications.id })
+        .from(notifications)
+        .where(
+          and(
+            eq(notifications.userId, context.user.id),
+            eq(notifications.read, false),
+            or(eq(notifications.type, 'query_raised'), eq(notifications.type, 'query_response')),
+            like(notifications.link, `%/${application.id}`),
+          ),
+        )
+        .limit(1),
     ])
 
     return {
@@ -65,6 +86,7 @@ export const getApplicationFn = createServerFn({ method: 'GET' })
       comments: applicationComments,
       documents: applicationDocuments,
       history: history.map((h) => ({ ...h.entry, actorName: h.actor.name, actorRole: h.actor.role })),
+      hasUnreadQuery: unreadQueryNotifications.length > 0,
     }
   })
 
@@ -304,15 +326,32 @@ export const postQueryMessageFn = createServerFn({ method: 'POST' })
       actorUserId: context.user.id,
     })
 
-    if (application.createdByUserId !== context.user.id) {
+    // Every role with a stake in this application — the creator, the branch it
+    // belongs to, and every credit officer / MD / admin — gets notified, not just
+    // the loan officer who created it.
+    const allUsers = await db.select().from(users)
+    const recipients = new Map<string, (typeof allUsers)[number]>()
+    for (const u of allUsers) {
+      if (u.id === context.user.id) continue
+      const isCreator = u.id === application.createdByUserId
+      const isBranchOfficerHere = u.role === 'branch_officer' && u.branch === application.branch
+      const isCreditOrManagement = u.role === 'credit_officer' || u.role === 'md' || u.role === 'admin'
+      if (isCreator || isBranchOfficerHere || isCreditOrManagement) recipients.set(u.id, u)
+    }
+
+    if (recipients.size > 0) {
       const { createNotification } = await import('#/lib/notifications/create-notification.server')
-      await createNotification({
-        userId: application.createdByUserId,
-        type: isRaisingQuery ? 'query_raised' : 'query_response',
-        title: isRaisingQuery ? 'New query on your application' : 'Reply posted to your query',
-        body: `${context.user.name} ${isRaisingQuery ? 'raised a query on' : 'responded to your query on'} ${application.referenceNumber} — ${application.applicantName}`,
-        link: `/loan-officer/${application.id}`,
-      })
+      await Promise.all(
+        Array.from(recipients.values()).map((u) =>
+          createNotification({
+            userId: u.id,
+            type: isRaisingQuery ? 'query_raised' : 'query_response',
+            title: isRaisingQuery ? 'New query raised' : 'Reply posted to a query',
+            body: `${context.user.name} ${isRaisingQuery ? 'raised a query on' : 'responded to a query on'} ${application.referenceNumber} — ${application.applicantName}`,
+            link: ROLE_APPLICATION_DETAIL[u.role](application.id),
+          }),
+        ),
+      )
     }
 
     return { ok: true }
@@ -467,6 +506,104 @@ export const declineByBranchFn = createServerFn({ method: 'POST' })
       type: 'loan_activity',
       title: 'Application declined',
       body: `${application.referenceNumber} — ${application.applicantName} was declined by the branch`,
+      link: `/loan-officer/${application.id}`,
+    })
+
+    return { ok: true }
+  })
+
+// MD can step in and decide an application at any point before it's been
+// finally decided — not just when it's sitting in their own queue.
+const MD_DECIDABLE_STATUSES = ['submitted', 'queried', 'with_credit'] as const
+
+export const approveByMdFn = createServerFn({ method: 'POST' })
+  .middleware([requireRole('md')])
+  .validator(z.object({ applicationId: z.string(), notes: z.string().optional() }))
+  .handler(async ({ context, data }) => {
+    const [application] = await db.select().from(loanApplications).where(eq(loanApplications.id, data.applicationId)).limit(1)
+    if (!application) throw new Error('Not found')
+    if (!MD_DECIDABLE_STATUSES.includes(application.status as (typeof MD_DECIDABLE_STATUSES)[number])) {
+      throw new Error('This application has already been decided')
+    }
+
+    const statements = await db.select().from(documents).where(eq(documents.loanApplicationId, application.id))
+    if (!statements.some((d) => d.documentType === 'Bank Statement')) {
+      throw new Error('Upload a bank statement before approving this application')
+    }
+
+    const fromStatus = application.status
+
+    await db
+      .update(loanApplications)
+      .set({
+        status: 'approved',
+        decidedByUserId: context.user.id,
+        decisionNotes: data.notes || null,
+        decidedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(loanApplications.id, application.id))
+
+    await db.insert(loanStatusHistory).values({
+      loanApplicationId: application.id,
+      fromStatus,
+      toStatus: 'approved',
+      actorUserId: context.user.id,
+      note: data.notes,
+    })
+
+    const { createNotification } = await import('#/lib/notifications/create-notification.server')
+    await createNotification({
+      userId: application.createdByUserId,
+      type: 'loan_activity',
+      title: 'Application approved',
+      body: `${application.referenceNumber} — ${application.applicantName} was approved by the Managing Director`,
+      link: `/loan-officer/${application.id}`,
+    })
+
+    return { ok: true }
+  })
+
+export const declineByMdFn = createServerFn({ method: 'POST' })
+  .middleware([requireRole('md')])
+  .validator(z.object({ applicationId: z.string(), notes: z.string().min(1) }))
+  .handler(async ({ context, data }) => {
+    const [application] = await db.select().from(loanApplications).where(eq(loanApplications.id, data.applicationId)).limit(1)
+    if (!application) throw new Error('Not found')
+    if (!MD_DECIDABLE_STATUSES.includes(application.status as (typeof MD_DECIDABLE_STATUSES)[number])) {
+      throw new Error('This application has already been decided')
+    }
+
+    const fromStatus = application.status
+    // Mirror the terminal label the normal flow would use at this stage —
+    // "declined" pre-credit-review, "rejected" once it reached credit.
+    const toStatus = fromStatus === 'with_credit' ? 'rejected' : 'declined'
+
+    await db
+      .update(loanApplications)
+      .set({
+        status: toStatus,
+        decidedByUserId: context.user.id,
+        decisionNotes: data.notes,
+        decidedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(loanApplications.id, application.id))
+
+    await db.insert(loanStatusHistory).values({
+      loanApplicationId: application.id,
+      fromStatus,
+      toStatus,
+      actorUserId: context.user.id,
+      note: data.notes,
+    })
+
+    const { createNotification } = await import('#/lib/notifications/create-notification.server')
+    await createNotification({
+      userId: application.createdByUserId,
+      type: 'loan_activity',
+      title: 'Application declined',
+      body: `${application.referenceNumber} — ${application.applicantName} was declined by the Managing Director`,
       link: `/loan-officer/${application.id}`,
     })
 

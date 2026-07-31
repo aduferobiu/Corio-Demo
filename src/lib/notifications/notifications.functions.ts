@@ -1,4 +1,4 @@
-import { and, desc, eq } from 'drizzle-orm'
+import { and, desc, eq, like, or } from 'drizzle-orm'
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
@@ -32,5 +32,24 @@ export const markAllNotificationsReadFn = createServerFn({ method: 'POST' })
   .middleware([authMiddleware])
   .handler(async ({ context }) => {
     await db.update(notifications).set({ read: true }).where(eq(notifications.userId, context.user.id))
+    return { ok: true }
+  })
+
+// Clears the unread badge on a specific application's query thread — called
+// when the current user opens that thread.
+export const markQueryNotificationsReadFn = createServerFn({ method: 'POST' })
+  .middleware([authMiddleware])
+  .validator(z.object({ applicationId: z.string() }))
+  .handler(async ({ context, data }) => {
+    await db
+      .update(notifications)
+      .set({ read: true })
+      .where(
+        and(
+          eq(notifications.userId, context.user.id),
+          or(eq(notifications.type, 'query_raised'), eq(notifications.type, 'query_response')),
+          like(notifications.link, `%/${data.applicationId}`),
+        ),
+      )
     return { ok: true }
   })

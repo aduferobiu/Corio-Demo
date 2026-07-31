@@ -6,16 +6,9 @@ import { toast } from 'sonner'
 import { Avatar, AvatarFallback, AvatarImage } from '#/components/ui/avatar'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
+import { getAvatarColor, getInitials } from '#/components/initials-avatar'
 import type { AuthUser } from '#/lib/auth/types'
 import { updateProfileFn } from '#/lib/settings/profile.functions'
-
-function initials(name: string) {
-  return name
-    .split(' ')
-    .map((p) => p[0])
-    .slice(0, 2)
-    .join('')
-}
 
 export function PersonalDetailsTab({ user }: { user: AuthUser }) {
   const router = useRouter()
@@ -74,7 +67,9 @@ export function PersonalDetailsTab({ user }: { user: AuthUser }) {
           <div className="flex items-center gap-3">
             <Avatar size="lg">
               <AvatarImage src={avatarUrl} alt={name} />
-              <AvatarFallback>{initials(name || user.name)}</AvatarFallback>
+              <AvatarFallback className="text-white" style={{ backgroundColor: getAvatarColor(name || user.name) }}>
+                {getInitials(name || user.name)}
+              </AvatarFallback>
             </Avatar>
             <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
               Upload Photo

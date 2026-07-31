@@ -15,7 +15,7 @@ export const ROLE_LOAN_HOME: Record<Role, string> = {
   loan_officer: '/loan-officer',
   branch_officer: '/branch-officer/loan',
   credit_officer: '/credit-officer',
-  md: '/md',
+  md: '/md/loan',
   admin: '/loan-officer',
 }
 

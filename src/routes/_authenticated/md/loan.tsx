@@ -7,22 +7,19 @@ import { Sidebar } from '#/components/loans/sidebar'
 import { StatusBadge, type LoanStatus } from '#/components/loans/status-badge'
 import { Input } from '#/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '#/components/ui/table'
-import { listBranchApplicationsFn } from '#/lib/loans/loans.functions'
+import { formatElapsed } from '#/lib/loans/format'
+import { listAllApplicationsFn } from '#/lib/loans/loans.functions'
 
-export const Route = createFileRoute('/_authenticated/branch-officer/loan')({
-  loader: () => listBranchApplicationsFn(),
-  component: BranchOfficerLoanList,
+export const Route = createFileRoute('/_authenticated/md/loan')({
+  loader: () => listAllApplicationsFn(),
+  component: MdLoanList,
 })
 
 function formatNaira(amount: number) {
   return `₦${amount.toLocaleString('en-NG')}`
 }
 
-function formatDate(date: Date) {
-  return new Date(date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })
-}
-
-function BranchOfficerLoanList() {
+function MdLoanList() {
   const applications = Route.useLoaderData()
   const { user } = Route.useRouteContext()
   const navigate = useNavigate()
@@ -47,7 +44,7 @@ function BranchOfficerLoanList() {
                   <TableHead>Loan</TableHead>
                   <TableHead>Income</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Date Added</TableHead>
+                  <TableHead className="pr-6">Time at Stage</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -62,7 +59,7 @@ function BranchOfficerLoanList() {
                   <TableRow
                     key={app.id}
                     className="cursor-pointer"
-                    onClick={() => navigate({ to: '/branch-officer/$applicationId', params: { applicationId: app.id } })}
+                    onClick={() => navigate({ to: '/md/$applicationId', params: { applicationId: app.id } })}
                   >
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -79,7 +76,7 @@ function BranchOfficerLoanList() {
                     <TableCell>
                       <StatusBadge status={app.status as LoanStatus} />
                     </TableCell>
-                    <TableCell className="text-sm text-[var(--corio-neutral-800)]">{formatDate(app.createdAt)}</TableCell>
+                    <TableCell className="pr-6 text-sm text-[var(--corio-neutral-800)]">{formatElapsed(app.updatedAt)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

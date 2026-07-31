@@ -3,6 +3,7 @@ import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
 import { Toaster } from 'sonner'
 
+import { TopProgressBar } from '#/components/top-progress-bar'
 import { getCurrentUserFn } from '#/lib/auth/auth.functions'
 import type { AuthUser } from '#/lib/auth/types'
 import appCss from '../styles.css?url'
@@ -30,6 +31,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
+        <TopProgressBar />
         {children}
         <Toaster richColors position="top-right" />
         <TanStackDevtools

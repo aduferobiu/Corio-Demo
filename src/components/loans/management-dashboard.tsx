@@ -10,10 +10,12 @@ type ManagementDashboardData = Awaited<ReturnType<typeof getManagementDashboardF
 export function ManagementDashboardView({
   data,
   onRowClick,
+  onAlertClick,
 }: {
   data: ManagementDashboardData
   role: Role
   onRowClick?: (applicationId: string) => void
+  onAlertClick?: (applicationId: string) => void
 }) {
   return (
     <div className="flex flex-col gap-8">
@@ -99,7 +101,10 @@ export function ManagementDashboardView({
               return (
                 <div
                   key={alert.id}
-                  className={`flex flex-col gap-1 rounded-xl px-3.5 pt-3.5 pb-4 text-sm ${
+                  role={onAlertClick ? 'button' : undefined}
+                  tabIndex={onAlertClick ? 0 : undefined}
+                  onClick={() => onAlertClick?.(alert.id)}
+                  className={`flex flex-col gap-1 rounded-xl px-3.5 pt-3.5 pb-4 text-sm ${onAlertClick ? 'cursor-pointer hover:brightness-95' : ''} ${
                     overTarget ? 'bg-[var(--corio-red-light)] text-[var(--corio-red-darker)]' : 'bg-[#ffdac2] text-[#6e330c]'
                   }`}
                 >

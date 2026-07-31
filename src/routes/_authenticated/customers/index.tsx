@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate, useRouter } from '@tanstack/react-router'
 import { useServerFn } from '@tanstack/react-start'
 import { Plus, Search } from 'lucide-react'
 
+import { InitialsAvatar } from '#/components/initials-avatar'
 import { AppHeader } from '#/components/loans/app-header'
 import { NewCustomerModal } from '#/components/loans/new-customer-modal'
 import { Sidebar } from '#/components/loans/sidebar'
@@ -87,13 +88,7 @@ function CustomersIndex() {
                   >
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[var(--corio-neutral-100)] text-xs font-medium text-[var(--corio-neutral-600)]">
-                          {customer.fullName
-                            .split(' ')
-                            .map((p) => p[0])
-                            .slice(0, 2)
-                            .join('')}
-                        </div>
+                        <InitialsAvatar name={customer.fullName} className="size-8 text-xs font-medium" />
                         <span className="max-w-[120px] truncate text-sm font-medium text-[var(--corio-neutral-800)]">{customer.fullName}</span>
                       </div>
                     </TableCell>

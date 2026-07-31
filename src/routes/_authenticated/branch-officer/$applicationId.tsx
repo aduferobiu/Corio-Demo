@@ -8,6 +8,7 @@ import { ApplicationDetailView } from '#/components/loans/application-detail'
 import { DecisionModal } from '#/components/loans/decision-modal'
 import { Sidebar } from '#/components/loans/sidebar'
 import { Button } from '#/components/ui/button'
+import { usePoll } from '#/lib/hooks/use-poll'
 import {
   approveByBranchFn,
   declineByBranchFn,
@@ -16,6 +17,7 @@ import {
   postQueryMessageFn,
   uploadBankStatementFn,
 } from '#/lib/loans/loans.functions'
+import { markQueryNotificationsReadFn } from '#/lib/notifications/notifications.functions'
 
 export const Route = createFileRoute('/_authenticated/branch-officer/$applicationId')({
   loader: ({ params }) => getApplicationFn({ data: { id: params.applicationId } }),
@@ -34,12 +36,15 @@ function BranchOfficerApplicationDetail() {
   const decline = useServerFn(declineByBranchFn)
   const uploadBankStatement = useServerFn(uploadBankStatementFn)
   const deleteBankStatement = useServerFn(deleteBankStatementFn)
+  const markQueryRead = useServerFn(markQueryNotificationsReadFn)
 
   const [approveOpen, setApproveOpen] = useState(false)
   const [declineOpen, setDeclineOpen] = useState(false)
 
   const canDecide = data.application.status === 'submitted'
   const isDecided = ['approved', 'rejected', 'declined'].includes(data.application.status)
+
+  usePoll(() => router.invalidate(), 5000)
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -85,6 +90,12 @@ function BranchOfficerApplicationDetail() {
             } catch (err) {
               toast.error(err instanceof Error ? err.message : 'Failed to remove bank statement')
             }
+          }}
+          hasUnreadQuery={data.hasUnreadQuery}
+          onOpenQueryThread={async () => {
+            if (!data.hasUnreadQuery) return
+            await markQueryRead({ data: { applicationId } })
+            await router.invalidate()
           }}
           headerActions={
             canDecide ? (

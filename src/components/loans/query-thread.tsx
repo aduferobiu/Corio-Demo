@@ -3,6 +3,7 @@ import { FileText, Paperclip, X } from 'lucide-react'
 
 import { Button } from '#/components/ui/button'
 import { Textarea } from '#/components/ui/textarea'
+import { InitialsAvatar } from '#/components/initials-avatar'
 import { formatTime } from '#/lib/loans/format'
 
 const ROLE_LABELS: Record<string, string> = {
@@ -99,13 +100,7 @@ export function QueryThreadPanel({
           const attachment = attachments.find((a) => a.commentId === comment.id)
           return (
             <div key={comment.id} className="flex gap-2.5 py-3">
-              <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[var(--corio-neutral-100)] text-[10px] font-semibold text-[var(--corio-neutral-600)]">
-                {author.name
-                  .split(' ')
-                  .map((p) => p[0])
-                  .slice(0, 2)
-                  .join('')}
-              </div>
+              <InitialsAvatar name={author.name} className="size-6 text-[10px] font-semibold" />
               <div className="flex min-w-0 flex-1 flex-col gap-1">
                 <div className="flex items-center justify-between text-xs whitespace-nowrap">
                   <div className="flex items-center gap-1.5 font-medium text-[var(--corio-neutral-700)]">

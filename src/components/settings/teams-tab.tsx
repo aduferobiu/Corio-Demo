@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '#/components/ui/alert-dialog'
 import { Button } from '#/components/ui/button'
+import { InitialsAvatar } from '#/components/initials-avatar'
 import { RoleBadge } from '#/components/settings/role-badge'
 import { EmptyState } from '#/components/settings/empty-state'
 import { TeamUserModal } from '#/components/settings/team-user-modal'
@@ -85,13 +86,7 @@ export function TeamsTab({ initialMembers, currentUserId }: { initialMembers: Te
                 <TableRow key={member.id}>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[var(--corio-neutral-100)] text-xs font-medium text-[var(--corio-neutral-600)]">
-                        {member.name
-                          .split(' ')
-                          .map((p) => p[0])
-                          .slice(0, 2)
-                          .join('')}
-                      </div>
+                      <InitialsAvatar name={member.name} className="size-8 text-xs font-medium" />
                       <div className="flex flex-col">
                         <span className="text-sm font-medium text-[var(--corio-neutral-800)]">{member.name}</span>
                         <span className="text-xs text-[var(--corio-neutral-400)]">{member.email}</span>

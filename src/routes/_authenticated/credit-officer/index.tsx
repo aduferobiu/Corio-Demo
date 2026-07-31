@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 
+import { InitialsAvatar } from '#/components/initials-avatar'
 import { AppHeader } from '#/components/loans/app-header'
 import { Sidebar } from '#/components/loans/sidebar'
 import { StatusBadge, type LoanStatus } from '#/components/loans/status-badge'
@@ -68,13 +69,7 @@ function CreditOfficerIndex() {
                   >
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[var(--corio-neutral-100)] text-xs font-medium text-[var(--corio-neutral-600)]">
-                          {app.applicantName
-                            .split(' ')
-                            .map((p) => p[0])
-                            .slice(0, 2)
-                            .join('')}
-                        </div>
+                        <InitialsAvatar name={app.applicantName} className="size-8 text-xs font-medium" />
                         <span className="text-sm font-medium text-[var(--corio-neutral-800)]">{app.applicantName}</span>
                       </div>
                     </TableCell>

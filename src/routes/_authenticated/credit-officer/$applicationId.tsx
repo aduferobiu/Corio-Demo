@@ -8,8 +8,10 @@ import { ApplicationDetailView } from '#/components/loans/application-detail'
 import { DecisionModal } from '#/components/loans/decision-modal'
 import { Sidebar } from '#/components/loans/sidebar'
 import { Button } from '#/components/ui/button'
+import { usePoll } from '#/lib/hooks/use-poll'
 import { analyzeBankStatement } from '#/lib/loans/bank-analysis'
 import { approveByCreditFn, getApplicationFn, postQueryMessageFn, rejectByCreditFn } from '#/lib/loans/loans.functions'
+import { markQueryNotificationsReadFn } from '#/lib/notifications/notifications.functions'
 
 export const Route = createFileRoute('/_authenticated/credit-officer/$applicationId')({
   loader: ({ params }) => getApplicationFn({ data: { id: params.applicationId } }),
@@ -26,6 +28,7 @@ function CreditOfficerApplicationDetail() {
   const postQueryMessage = useServerFn(postQueryMessageFn)
   const approve = useServerFn(approveByCreditFn)
   const reject = useServerFn(rejectByCreditFn)
+  const markQueryRead = useServerFn(markQueryNotificationsReadFn)
 
   const [approveOpen, setApproveOpen] = useState(false)
   const [declineOpen, setDeclineOpen] = useState(false)
@@ -33,6 +36,8 @@ function CreditOfficerApplicationDetail() {
   const canDecide = data.application.status === 'with_credit'
   const isDecided = ['approved', 'rejected', 'declined'].includes(data.application.status)
   const analysis = analyzeBankStatement(data.application)
+
+  usePoll(() => router.invalidate(), 5000)
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -55,6 +60,12 @@ function CreditOfficerApplicationDetail() {
             toast.success('Message sent')
           }}
           bankStatementReportHref={`/credit-officer/${applicationId}/bank-statement`}
+          hasUnreadQuery={data.hasUnreadQuery}
+          onOpenQueryThread={async () => {
+            if (!data.hasUnreadQuery) return
+            await markQueryRead({ data: { applicationId } })
+            await router.invalidate()
+          }}
           headerActions={
             canDecide ? (
               <>
