@@ -34,7 +34,7 @@ function CreditOfficerApplicationDetail() {
   const [declineOpen, setDeclineOpen] = useState(false)
 
   const canDecide = data.application.status === 'with_credit'
-  const isDecided = ['approved', 'rejected', 'declined'].includes(data.application.status)
+  const isDecided = ['approved', 'declined'].includes(data.application.status)
   const analysis = analyzeBankStatement(data.application)
 
   usePoll(() => router.invalidate(), 5000)

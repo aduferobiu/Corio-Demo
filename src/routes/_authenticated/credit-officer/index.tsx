@@ -39,7 +39,7 @@ function CreditOfficerIndex() {
           <div className="flex items-stretch gap-6">
             <StatCard label="Total Amount" value={formatNaira(stats.totalAmount)} />
             <StatCard label="Total No. Approved Loan" value={String(stats.totalApproved)} />
-            <StatCard label="Total No. Declined Loan" value={String(stats.totalRejected)} />
+            <StatCard label="Total No. Declined Loan" value={String(stats.totalDeclined)} />
             <StatCard label="Total No. Pending Loan" value={String(stats.totalPending)} />
           </div>
 

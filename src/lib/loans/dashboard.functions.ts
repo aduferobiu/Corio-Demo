@@ -31,7 +31,7 @@ export const getLoanOfficerDashboardFn = createServerFn({ method: 'GET' })
       pendingReview: applications.filter((a) => a.status === 'submitted' || a.status === 'with_credit').length,
       queriesNeedingResponse: openQueries.length,
       approved: applications.filter((a) => a.status === 'approved').length,
-      declined: applications.filter((a) => a.status === 'declined' || a.status === 'rejected').length,
+      declined: applications.filter((a) => a.status === 'declined').length,
       openQueries,
       applications,
     }
@@ -57,7 +57,7 @@ export const getCreditOfficerDashboardFn = createServerFn({ method: 'GET' })
 
     const decidedByMe = applications.filter((a) => a.decidedByUserId === context.user.id && a.decidedAt)
     const approvedThisMonth = decidedByMe.filter((a) => a.status === 'approved' && a.decidedAt! >= monthStart).length
-    const declinedThisMonth = decidedByMe.filter((a) => a.status === 'rejected' && a.decidedAt! >= monthStart).length
+    const declinedThisMonth = decidedByMe.filter((a) => a.status === 'declined' && a.decidedAt! >= monthStart).length
 
     const decisionTimesHours = decidedByMe
       .filter((a) => a.submittedAt && a.decidedAt)
@@ -92,7 +92,7 @@ export const getManagementDashboardFn = createServerFn({ method: 'GET' })
     const totalApplications = scoped.length
     const pendingReview = scoped.filter((r) => ['submitted', 'with_credit', 'queried'].includes(r.app.status)).length
     const approved = scoped.filter((r) => r.app.status === 'approved').length
-    const declined = scoped.filter((r) => r.app.status === 'declined' || r.app.status === 'rejected').length
+    const declined = scoped.filter((r) => r.app.status === 'declined').length
     const totalAmountRequested = scoped.reduce((sum, r) => sum + r.app.amountRequested, 0)
 
     const decided = scoped.filter((r) => r.app.submittedAt && r.app.decidedAt)

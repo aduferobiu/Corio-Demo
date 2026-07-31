@@ -1,6 +1,6 @@
 import { cn } from '#/lib/utils'
 
-export type LoanStatus = 'draft' | 'submitted' | 'queried' | 'with_credit' | 'approved' | 'declined' | 'rejected'
+export type LoanStatus = 'draft' | 'submitted' | 'queried' | 'with_credit' | 'approved' | 'declined'
 
 const STATUS_STYLES: Record<LoanStatus, { label: string; className: string }> = {
   draft: { label: 'Draft', className: 'bg-[var(--corio-neutral-100)] text-[var(--corio-neutral-500)]' },
@@ -9,7 +9,6 @@ const STATUS_STYLES: Record<LoanStatus, { label: string; className: string }> = 
   with_credit: { label: 'Awaiting Credit Officer', className: 'bg-[var(--corio-purple-light)] text-[var(--corio-purple-darker)]' },
   approved: { label: 'Approved', className: 'bg-[var(--corio-green-light)] text-[var(--corio-green-darker)]' },
   declined: { label: 'Declined', className: 'bg-[var(--corio-red-light)] text-[var(--corio-red-darker)]' },
-  rejected: { label: 'Rejected', className: 'bg-[var(--corio-red-light)] text-[var(--corio-red-darker)]' },
 }
 
 export function StatusBadge({ status, className }: { status: LoanStatus; className?: string }) {

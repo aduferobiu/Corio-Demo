@@ -110,7 +110,7 @@ export function ApplicationDetailView({
   // statement record is final. "queried" is excluded on purpose — a branch officer
   // may still need to attach an updated statement while a query is outstanding.
   const statementsLocked =
-    Boolean(bankAnalysisRunAt) || ['with_credit', 'approved', 'rejected', 'declined'].includes(application.status)
+    Boolean(bankAnalysisRunAt) || ['with_credit', 'approved', 'declined'].includes(application.status)
   const otherDocs = documents.filter((d) => d.documentType !== 'Bank Statement' && d.documentType !== 'Query Attachment')
   const threadAttachments = documents.filter((d) => d.commentId)
   const employerOrBusiness = application.employmentType === 'self_employed' ? application.businessName : application.employerName
@@ -184,7 +184,7 @@ export function ApplicationDetailView({
         </div>
       </div>
 
-      <div className="mt-[17px] mx-auto flex w-full max-w-[1600px] flex-col items-start gap-6 xl:flex-row">
+      <div className="mt-[17px] flex w-full flex-col items-start gap-6 xl:flex-row">
         <div className="flex w-full min-w-0 flex-col gap-6 xl:flex-1">
           <Card title="Personal Information">
             <div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-2 2xl:grid-cols-3">

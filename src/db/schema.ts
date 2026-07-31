@@ -104,7 +104,7 @@ export const loanApplications = pgTable(
     totalAmountDue: integer('total_amount_due'),
 
     status: text('status', {
-      enum: ['draft', 'submitted', 'queried', 'with_credit', 'approved', 'declined', 'rejected'],
+      enum: ['draft', 'submitted', 'queried', 'with_credit', 'approved', 'declined'],
     })
       .notNull()
       .default('draft'),

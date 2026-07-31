@@ -105,12 +105,12 @@ export const getCreditStatsFn = createServerFn({ method: 'GET' })
   .handler(async () => {
     const all = await db.select().from(loanApplications)
     const approved = all.filter((a) => a.status === 'approved')
-    const rejected = all.filter((a) => a.status === 'rejected')
+    const declined = all.filter((a) => a.status === 'declined')
     const pending = all.filter((a) => a.status === 'with_credit')
     return {
       totalAmount: approved.reduce((sum, a) => sum + a.amountRequested, 0),
       totalApproved: approved.length,
-      totalRejected: rejected.length,
+      totalDeclined: declined.length,
       totalPending: pending.length,
     }
   })
@@ -276,7 +276,7 @@ export const postQueryMessageFn = createServerFn({ method: 'POST' })
     if (['loan_officer', 'admin'].includes(context.user.role) && application.createdByUserId !== context.user.id) {
       throw new Error('Not found')
     }
-    if (['approved', 'rejected', 'declined'].includes(application.status)) {
+    if (['approved', 'declined'].includes(application.status)) {
       throw new Error('A decision has already been made on this application')
     }
 
@@ -407,7 +407,7 @@ export const rejectByCreditFn = createServerFn({ method: 'POST' })
     await db
       .update(loanApplications)
       .set({
-        status: 'rejected',
+        status: 'declined',
         decidedByUserId: context.user.id,
         decisionNotes: data.notes,
         decidedAt: new Date(),
@@ -418,7 +418,7 @@ export const rejectByCreditFn = createServerFn({ method: 'POST' })
     await db.insert(loanStatusHistory).values({
       loanApplicationId: application.id,
       fromStatus: 'with_credit',
-      toStatus: 'rejected',
+      toStatus: 'declined',
       actorUserId: context.user.id,
       note: data.notes,
     })
@@ -427,8 +427,8 @@ export const rejectByCreditFn = createServerFn({ method: 'POST' })
     await createNotification({
       userId: application.createdByUserId,
       type: 'loan_activity',
-      title: 'Application rejected',
-      body: `${application.referenceNumber} — ${application.applicantName} was rejected by credit review`,
+      title: 'Application declined',
+      body: `${application.referenceNumber} — ${application.applicantName} was declined by credit review`,
       link: `/loan-officer/${application.id}`,
     })
 
@@ -575,14 +575,11 @@ export const declineByMdFn = createServerFn({ method: 'POST' })
     }
 
     const fromStatus = application.status
-    // Mirror the terminal label the normal flow would use at this stage —
-    // "declined" pre-credit-review, "rejected" once it reached credit.
-    const toStatus = fromStatus === 'with_credit' ? 'rejected' : 'declined'
 
     await db
       .update(loanApplications)
       .set({
-        status: toStatus,
+        status: 'declined',
         decidedByUserId: context.user.id,
         decisionNotes: data.notes,
         decidedAt: new Date(),
@@ -593,7 +590,7 @@ export const declineByMdFn = createServerFn({ method: 'POST' })
     await db.insert(loanStatusHistory).values({
       loanApplicationId: application.id,
       fromStatus,
-      toStatus,
+      toStatus: 'declined',
       actorUserId: context.user.id,
       note: data.notes,
     })

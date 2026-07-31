@@ -21,7 +21,7 @@ function LoanOfficerApplicationDetail() {
   const router = useRouter()
   const postQueryMessage = useServerFn(postQueryMessageFn)
   const markQueryRead = useServerFn(markQueryNotificationsReadFn)
-  const isDecided = ['approved', 'rejected', 'declined'].includes(data.application.status)
+  const isDecided = ['approved', 'declined'].includes(data.application.status)
 
   usePoll(() => router.invalidate(), 5000)
 

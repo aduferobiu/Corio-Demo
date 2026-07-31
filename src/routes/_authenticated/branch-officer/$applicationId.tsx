@@ -42,7 +42,7 @@ function BranchOfficerApplicationDetail() {
   const [declineOpen, setDeclineOpen] = useState(false)
 
   const canDecide = data.application.status === 'submitted'
-  const isDecided = ['approved', 'rejected', 'declined'].includes(data.application.status)
+  const isDecided = ['approved', 'declined'].includes(data.application.status)
 
   usePoll(() => router.invalidate(), 5000)
 

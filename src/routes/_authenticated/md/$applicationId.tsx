@@ -33,7 +33,7 @@ function MdApplicationDetail() {
   const [approveOpen, setApproveOpen] = useState(false)
   const [declineOpen, setDeclineOpen] = useState(false)
 
-  const isDecided = ['approved', 'rejected', 'declined'].includes(data.application.status)
+  const isDecided = ['approved', 'declined'].includes(data.application.status)
   const canDecide = ['submitted', 'queried', 'with_credit'].includes(data.application.status)
   const analysis = analyzeBankStatement(data.application)
 
