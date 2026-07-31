@@ -13,6 +13,7 @@ import { Label } from '#/components/ui/label'
 import { NativeSelect } from '#/components/ui/native-select'
 import { RadioGroup, RadioGroupItem } from '#/components/ui/radio-group'
 import { Textarea } from '#/components/ui/textarea'
+import { ROLE_LOAN_HOME } from '#/lib/auth/role-routes'
 import { listCustomersFn } from '#/lib/customers/customers.functions'
 import { createApplicationFn } from '#/lib/loans/loans.functions'
 
@@ -211,7 +212,7 @@ function NewLoanApplication() {
             variant="outline"
             size="lg"
             className="w-full border-[var(--corio-blue-500)] text-[var(--corio-blue-500)]"
-            onClick={() => navigate({ to: '/loan-officer' })}
+            onClick={() => navigate({ to: ROLE_LOAN_HOME[user!.role] })}
           >
             Back to dashboard
           </Button>
@@ -227,7 +228,7 @@ function NewLoanApplication() {
         <header className="relative flex h-[72px] shrink-0 items-center justify-center border-b border-[var(--corio-neutral-100)] px-6">
           <button
             type="button"
-            onClick={() => navigate({ to: '/loan-officer' })}
+            onClick={() => navigate({ to: ROLE_LOAN_HOME[user!.role] })}
             className="absolute left-6 flex items-center gap-1.5 text-sm font-medium text-[var(--corio-neutral-500)]"
           >
             <X className="size-5" />

@@ -6,11 +6,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '#/components/u
 import { Textarea } from '#/components/ui/textarea'
 import { formatNaira } from '#/lib/loans/format'
 
+const ROLE_LABELS: Record<string, string> = {
+  loan_officer: 'Loan Officer',
+  branch_officer: 'Branch Officer',
+  credit_officer: 'Credit Officer',
+  md: 'MD',
+  admin: 'Admin',
+}
+
 type DecisionModalProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   variant: 'approve' | 'reject'
   actorName: string
+  actorRole: string
   applicantName: string
   referenceNumber: string
   amountRequested: number
@@ -23,6 +32,7 @@ export function DecisionModal({
   onOpenChange,
   variant,
   actorName,
+  actorRole,
   applicantName,
   referenceNumber,
   amountRequested,
@@ -54,7 +64,7 @@ export function DecisionModal({
             {isApprove ? 'Confirm Approval' : 'Confirm Decline'}
           </DialogTitle>
           <p className="text-sm text-[var(--corio-neutral-400)]">
-            You are {isApprove ? 'approving' : 'declining'} this application as {actorName}, Credit Officer.
+            You are {isApprove ? 'approving' : 'declining'} this application as {actorName}, {ROLE_LABELS[actorRole] ?? actorRole}.
           </p>
         </DialogHeader>
 

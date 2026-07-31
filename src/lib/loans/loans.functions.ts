@@ -104,7 +104,7 @@ const applicantSchema = z.object({
 })
 
 export const createApplicationFn = createServerFn({ method: 'POST' })
-  .middleware([requireRole('loan_officer', 'admin')])
+  .middleware([requireRole('loan_officer', 'admin', 'branch_officer')])
   .validator((formData: unknown) => {
     if (!(formData instanceof FormData)) throw new Error('Expected FormData')
     const raw = Object.fromEntries(formData.entries())

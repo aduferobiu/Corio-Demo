@@ -75,6 +75,7 @@ function CreditOfficerApplicationDetail() {
         onOpenChange={setApproveOpen}
         variant="approve"
         actorName={user!.name}
+        actorRole={user!.role}
         applicantName={data.application.applicantName}
         referenceNumber={data.application.referenceNumber}
         amountRequested={data.application.amountRequested}
@@ -90,6 +91,7 @@ function CreditOfficerApplicationDetail() {
         onOpenChange={setDeclineOpen}
         variant="reject"
         actorName={user!.name}
+        actorRole={user!.role}
         applicantName={data.application.applicantName}
         referenceNumber={data.application.referenceNumber}
         amountRequested={data.application.amountRequested}

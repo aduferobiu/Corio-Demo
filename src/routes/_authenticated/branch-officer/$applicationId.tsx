@@ -106,6 +106,7 @@ function BranchOfficerApplicationDetail() {
         onOpenChange={setApproveOpen}
         variant="approve"
         actorName={user!.name}
+        actorRole={user!.role}
         applicantName={data.application.applicantName}
         referenceNumber={data.application.referenceNumber}
         amountRequested={data.application.amountRequested}
@@ -120,6 +121,7 @@ function BranchOfficerApplicationDetail() {
         onOpenChange={setDeclineOpen}
         variant="reject"
         actorName={user!.name}
+        actorRole={user!.role}
         applicantName={data.application.applicantName}
         referenceNumber={data.application.referenceNumber}
         amountRequested={data.application.amountRequested}
