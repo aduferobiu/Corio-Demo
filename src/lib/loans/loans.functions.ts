@@ -250,6 +250,24 @@ export const createApplicationFn = createServerFn({ method: 'POST' })
       })
     }
 
+    // Newly submitted applications are first in the branch officer's queue —
+    // let them know a task is waiting on them.
+    const branchOfficers = await db.select().from(users).where(and(eq(users.role, 'branch_officer'), eq(users.branch, application.branch ?? '')))
+    if (branchOfficers.length > 0) {
+      const { createNotification } = await import('#/lib/notifications/create-notification.server')
+      await Promise.all(
+        branchOfficers.map((u) =>
+          createNotification({
+            userId: u.id,
+            type: 'loan_activity',
+            title: 'New application awaiting review',
+            body: `${application.referenceNumber} — ${application.applicantName} was submitted and is awaiting your review`,
+            link: `/branch-officer/${application.id}`,
+          }),
+        ),
+      )
+    }
+
     return application
   })
 
@@ -326,17 +344,30 @@ export const postQueryMessageFn = createServerFn({ method: 'POST' })
       actorUserId: context.user.id,
     })
 
-    // Every role with a stake in this application — the creator, the branch it
-    // belongs to, and every credit officer / MD / admin — gets notified, not just
-    // the loan officer who created it.
+    // Only whoever needs to act next gets notified — not every role with
+    // eventual visibility into the application. Raising a query always waits on
+    // the loan officer to respond; a response hands the thread back to whichever
+    // stage the application is resuming at (read from the pre-query snapshot,
+    // since `application` here is still the state before this update).
     const allUsers = await db.select().from(users)
     const recipients = new Map<string, (typeof allUsers)[number]>()
+    const addRecipient = (u: (typeof allUsers)[number]) => {
+      if (u.id !== context.user.id) recipients.set(u.id, u)
+    }
+
+    if (isRaisingQuery) {
+      const creator = allUsers.find((u) => u.id === application.createdByUserId)
+      if (creator) addRecipient(creator)
+    } else {
+      const resumeStatus = application.preQueryStatus
+      for (const u of allUsers) {
+        if (resumeStatus === 'submitted' && u.role === 'branch_officer' && u.branch === application.branch) addRecipient(u)
+        if (resumeStatus === 'with_credit' && u.role === 'credit_officer') addRecipient(u)
+      }
+    }
+    // MD and admin keep full cross-stage oversight regardless of who currently owns it.
     for (const u of allUsers) {
-      if (u.id === context.user.id) continue
-      const isCreator = u.id === application.createdByUserId
-      const isBranchOfficerHere = u.role === 'branch_officer' && u.branch === application.branch
-      const isCreditOrManagement = u.role === 'credit_officer' || u.role === 'md' || u.role === 'admin'
-      if (isCreator || isBranchOfficerHere || isCreditOrManagement) recipients.set(u.id, u)
+      if (u.role === 'md' || u.role === 'admin') addRecipient(u)
     }
 
     if (recipients.size > 0) {
@@ -469,6 +500,20 @@ export const approveByBranchFn = createServerFn({ method: 'POST' })
       body: `${application.referenceNumber} — ${application.applicantName} was approved by the branch and is now with credit`,
       link: `/loan-officer/${application.id}`,
     })
+
+    // Now in the credit officer's shared queue — let them know a task is waiting.
+    const creditOfficers = await db.select().from(users).where(eq(users.role, 'credit_officer'))
+    await Promise.all(
+      creditOfficers.map((u) =>
+        createNotification({
+          userId: u.id,
+          type: 'loan_activity',
+          title: 'New application awaiting credit review',
+          body: `${application.referenceNumber} — ${application.applicantName} is now awaiting your review`,
+          link: `/credit-officer/${application.id}`,
+        }),
+      ),
+    )
 
     return { ok: true }
   })
