@@ -62,6 +62,7 @@ function CreditOfficerApplicationDetail() {
             await router.invalidate()
           }}
           bankStatementReportHref={`/credit-officer/${applicationId}/bank-statement`}
+          auditTrail={data.history}
           openQueryOnMount={search.openQuery === true}
           hasUnreadQuery={data.hasUnreadQuery}
           onOpenQueryThread={async () => {

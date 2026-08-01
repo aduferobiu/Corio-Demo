@@ -70,6 +70,7 @@ function BranchOfficerApplicationDetail() {
           }}
           bankStatementReportHref={`/branch-officer/${applicationId}/bank-statement`}
           bankAnalysisRunAt={data.application.bankAnalysisRunAt}
+          auditTrail={data.history}
           openQueryOnMount={search.openQuery === true}
           onRunBankAnalysis={() => navigate({ to: '/branch-officer/$applicationId/analyze', params: { applicationId } })}
           onUploadBankStatement={async (file) => {

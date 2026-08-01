@@ -5,6 +5,7 @@ import { ChevronRight, FileText, History, Plus, Trash2 } from 'lucide-react'
 import { Button } from '#/components/ui/button'
 import { AuditTrailPanel } from '#/components/loans/audit-trail-panel'
 import { BankStatementUploadModal } from '#/components/loans/bank-statement-upload-modal'
+import { DocumentPreviewModal } from '#/components/documents/document-preview-modal'
 import { ContentField } from '#/components/loans/content-field'
 import { QueryThreadPanel } from '#/components/loans/query-thread'
 import { InitialsAvatar } from '#/components/initials-avatar'
@@ -108,6 +109,7 @@ export function ApplicationDetailView({
   const [queryOpen, setQueryOpen] = useState(Boolean(openQueryOnMount))
   const [uploadStatementOpen, setUploadStatementOpen] = useState(false)
   const [auditTrailOpen, setAuditTrailOpen] = useState(false)
+  const [previewDoc, setPreviewDoc] = useState<DocumentRow | null>(null)
 
   useEffect(() => {
     if (openQueryOnMount) onOpenQueryThread?.()
@@ -230,10 +232,14 @@ export function ApplicationDetailView({
             {otherDocs.map((doc) => (
               <div key={doc.id} className="flex flex-col gap-2 w-full">
                 <p className="text-[11px] font-medium tracking-wider text-[var(--corio-neutral-400)] uppercase">{doc.documentType}</p>
-                <div className="flex items-center gap-2 self-start rounded-lg border border-[var(--corio-neutral-200)] bg-white py-2 pr-4 pl-2 shadow-[0px_2px_4px_0px_rgba(27,28,29,0.04)]">
+                <button
+                  type="button"
+                  onClick={() => setPreviewDoc(doc)}
+                  className="flex cursor-pointer items-center gap-2 self-start rounded-lg border border-[var(--corio-neutral-200)] bg-white py-2 pr-4 pl-2 shadow-[0px_2px_4px_0px_rgba(27,28,29,0.04)] hover:bg-[var(--corio-neutral-100)]"
+                >
                   <FileText className="size-4 text-[var(--corio-blue-500)]" />
                   <span className="text-xs font-medium text-[var(--corio-neutral-900)]">{doc.fileName}</span>
-                </div>
+                </button>
               </div>
             ))}
           </Card>
@@ -256,9 +262,11 @@ export function ApplicationDetailView({
             {bankStatementDocs.length > 0 ? (
               <>
                 {bankStatementDocs.map((doc) => (
-                  <div
+                  <button
+                    type="button"
                     key={doc.id}
-                    className="flex w-full items-center gap-3 rounded-xl border border-[var(--corio-neutral-200)] bg-white py-3 pr-5 pl-3 shadow-[0px_2px_4px_0px_rgba(27,28,29,0.04)]"
+                    onClick={() => setPreviewDoc(doc)}
+                    className="flex w-full cursor-pointer items-center gap-3 rounded-xl border border-[var(--corio-neutral-200)] bg-white py-3 pr-5 pl-3 text-left shadow-[0px_2px_4px_0px_rgba(27,28,29,0.04)] hover:bg-[var(--corio-neutral-100)]"
                   >
                     <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--corio-neutral-100)] text-[var(--corio-blue-500)]">
                       <FileText className="size-5" />
@@ -268,11 +276,19 @@ export function ApplicationDetailView({
                       <p className="text-xs text-[var(--corio-neutral-500)]">Uploaded with application</p>
                     </div>
                     {onDeleteBankStatement && !statementsLocked && (
-                      <button type="button" onClick={() => onDeleteBankStatement(doc.id)} className="shrink-0 text-[var(--corio-neutral-400)] hover:text-destructive">
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onDeleteBankStatement(doc.id)
+                        }}
+                        className="shrink-0 text-[var(--corio-neutral-400)] hover:text-destructive"
+                      >
                         <Trash2 className="size-5" />
-                      </button>
+                      </span>
                     )}
-                  </div>
+                  </button>
                 ))}
                 {onRunBankAnalysis && !statementsLocked ? (
                   <Button className="w-full" onClick={onRunBankAnalysis}>
@@ -307,6 +323,15 @@ export function ApplicationDetailView({
       )}
 
       {auditTrail && <AuditTrailPanel open={auditTrailOpen} onClose={() => setAuditTrailOpen(false)} entries={auditTrail} />}
+
+      {previewDoc && (
+        <DocumentPreviewModal
+          name={previewDoc.fileName}
+          dataUrl={previewDoc.dataUrl}
+          mimeType={previewDoc.mimeType}
+          onClose={() => setPreviewDoc(null)}
+        />
+      )}
     </main>
   )
 }

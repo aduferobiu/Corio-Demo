@@ -48,6 +48,7 @@ function LoanOfficerApplicationDetail() {
             await router.invalidate()
           }}
           bankStatementReportHref={`/loan-officer/${applicationId}/bank-statement`}
+          auditTrail={data.history}
           openQueryOnMount={search.openQuery === true}
           hasUnreadQuery={data.hasUnreadQuery}
           onOpenQueryThread={async () => {
