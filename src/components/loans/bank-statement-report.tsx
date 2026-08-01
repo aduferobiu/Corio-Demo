@@ -1,6 +1,6 @@
 import { CheckCircle2, Info } from 'lucide-react'
 
-import { analyzeBankStatement } from '#/lib/loans/bank-analysis'
+import type { BankAnalysisResult } from '#/lib/loans/bank-analysis'
 import { formatNaira } from '#/lib/loans/format'
 
 const RISK_COLORS: Record<string, string> = {
@@ -27,10 +27,18 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
   )
 }
 
-type ApplicationForAnalysis = Parameters<typeof analyzeBankStatement>[0]
+export function BankStatementReport({ analysis }: { analysis: BankAnalysisResult | null | undefined }) {
+  if (!analysis) {
+    return (
+      <div className="flex flex-col items-center gap-2 rounded-2xl border border-[var(--corio-neutral-200)] bg-white p-12 text-center">
+        <p className="text-base font-semibold text-[var(--corio-neutral-900)]">No analysis available yet</p>
+        <p className="text-sm text-[var(--corio-neutral-500)]">
+          Run the bank statement analysis from the application detail page to see a report here.
+        </p>
+      </div>
+    )
+  }
 
-export function BankStatementReport({ application }: { application: ApplicationForAnalysis }) {
-  const analysis = analyzeBankStatement(application)
   const barCount = 40
   const litBars = Math.round(analysis.riskScore * barCount)
   const riskColor = RISK_COLORS[analysis.riskLevel]
@@ -47,6 +55,9 @@ export function BankStatementReport({ application }: { application: ApplicationF
       <div className="flex items-stretch gap-6">
         <Card title="Recurring Financial Obligations">
           <div className="flex flex-col gap-3">
+            {analysis.obligations.length === 0 && (
+              <p className="text-sm text-[var(--corio-neutral-400)]">No recurring obligations detected.</p>
+            )}
             {analysis.obligations.map((o) => (
               <div key={o.title} className="flex items-center justify-between gap-4 rounded-xl bg-[var(--corio-neutral-100)] p-4">
                 <div className="flex flex-col gap-0.5">

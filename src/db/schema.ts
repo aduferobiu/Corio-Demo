@@ -1,4 +1,6 @@
-import { boolean, index, integer, pgTable, text, timestamp } from 'drizzle-orm/pg-core'
+import { boolean, index, integer, jsonb, pgTable, text, timestamp } from 'drizzle-orm/pg-core'
+
+import type { BankAnalysisResult } from '#/lib/loans/bank-analysis'
 
 const id = () =>
   text('id')
@@ -121,9 +123,12 @@ export const loanApplications = pgTable(
     decidedByUserId: text('decided_by_user_id').references(() => users.id),
     decisionNotes: text('decision_notes'),
 
-    // Set once the branch officer has run the illustrative bank statement
-    // analysis for this application; gates the "Run Analysis" vs "View Report" button.
+    // Set once the branch officer has run the bank statement analysis for this
+    // application; gates the "Run Analysis" vs "View Report" button.
     bankAnalysisRunAt: timestamp('bank_analysis_run_at'),
+    // Structured analysis produced by the OpenAI-backed pipeline, cached here so
+    // the report page doesn't re-run (and re-bill) the model on every view.
+    bankAnalysisResult: jsonb('bank_analysis_result').$type<BankAnalysisResult>(),
 
     submittedAt: timestamp('submitted_at'),
     decidedAt: timestamp('decided_at'),

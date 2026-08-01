@@ -39,7 +39,7 @@ function LoanOfficerBankStatement() {
               Download Report
             </Button>
           </div>
-          <BankStatementReport application={data.application} />
+          <BankStatementReport analysis={data.application.bankAnalysisResult} />
         </main>
       </div>
     </div>

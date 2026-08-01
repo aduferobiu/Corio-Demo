@@ -607,9 +607,9 @@ export const declineByMdFn = createServerFn({ method: 'POST' })
     return { ok: true }
   })
 
-// Illustrative — marks the analysis as "run" so the UI can switch from
-// "Run Analysis" to "View Report". The report itself is always derived
-// deterministically from the application's declared figures (see bank-analysis.ts).
+// Extracts text from every uploaded bank statement PDF and runs it through
+// OpenAI to produce a structured risk analysis, cached on the application so
+// the report page doesn't re-run (and re-bill) the model on every view.
 // Once run, the bank statement list is locked (see uploadBankStatementFn/deleteBankStatementFn).
 export const runBankAnalysisFn = createServerFn({ method: 'POST' })
   .middleware([requireRole('branch_officer')])
@@ -619,13 +619,30 @@ export const runBankAnalysisFn = createServerFn({ method: 'POST' })
       .select()
       .from(documents)
       .where(eq(documents.loanApplicationId, data.applicationId))
-    if (!statements.some((d) => d.documentType === 'Bank Statement')) {
+    const bankStatements = statements.filter((d) => d.documentType === 'Bank Statement')
+    if (bankStatements.length === 0) {
       throw new Error('Upload at least one bank statement before running the analysis')
     }
 
+    const { extractStatementText, analyzeStatementText } = await import('#/lib/loans/bank-analysis-ai.server')
+    const texts = await Promise.all(
+      bankStatements.map(async (doc) => {
+        if (!doc.dataUrl) return ''
+        try {
+          return await extractStatementText(doc.dataUrl)
+        } catch {
+          return ''
+        }
+      }),
+    )
+    const combinedText = texts.filter(Boolean).join('\n\n---\n\n')
+    if (!combinedText.trim()) throw new Error('Could not read any of the uploaded bank statements')
+
+    const result = await analyzeStatementText(combinedText)
+
     const [application] = await db
       .update(loanApplications)
-      .set({ bankAnalysisRunAt: new Date() })
+      .set({ bankAnalysisRunAt: new Date(), bankAnalysisResult: result })
       .where(eq(loanApplications.id, data.applicationId))
       .returning()
     if (!application) throw new Error('Not found')

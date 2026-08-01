@@ -9,7 +9,7 @@ import { DecisionModal } from '#/components/loans/decision-modal'
 import { Sidebar } from '#/components/loans/sidebar'
 import { Button } from '#/components/ui/button'
 import { usePoll } from '#/lib/hooks/use-poll'
-import { analyzeBankStatement } from '#/lib/loans/bank-analysis'
+import { riskSummary } from '#/lib/loans/bank-analysis'
 import { approveByMdFn, declineByMdFn, getApplicationFn, postQueryMessageFn } from '#/lib/loans/loans.functions'
 import { queryThreadSearchValidator } from '#/lib/loans/query-search'
 import { markQueryNotificationsReadFn } from '#/lib/notifications/notifications.functions'
@@ -38,7 +38,6 @@ function MdApplicationDetail() {
 
   const isDecided = ['approved', 'declined'].includes(data.application.status)
   const canDecide = ['submitted', 'queried', 'with_credit'].includes(data.application.status)
-  const analysis = analyzeBankStatement(data.application)
 
   usePoll(() => router.invalidate(), 5000)
 
@@ -94,7 +93,7 @@ function MdApplicationDetail() {
         applicantName={data.application.applicantName}
         referenceNumber={data.application.referenceNumber}
         amountRequested={data.application.amountRequested}
-        riskSummary={`${analysis.riskLevel} Risk · ${analysis.riskLevel === 'Low' ? 'Recommended for approval' : analysis.riskNote}`}
+        riskSummary={riskSummary(data.application.bankAnalysisResult)}
         onConfirm={async (notes) => {
           try {
             await approve({ data: { applicationId, notes } })

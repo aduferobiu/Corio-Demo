@@ -5,7 +5,6 @@ import { AppHeader } from '#/components/loans/app-header'
 import { BankStatementReport } from '#/components/loans/bank-statement-report'
 import { Sidebar } from '#/components/loans/sidebar'
 import { Button } from '#/components/ui/button'
-import { analyzeBankStatement } from '#/lib/loans/bank-analysis'
 import { getApplicationFn } from '#/lib/loans/loans.functions'
 
 export const Route = createFileRoute('/_authenticated/branch-officer/$applicationId_/bank-statement')({
@@ -24,7 +23,7 @@ function BranchOfficerBankStatement() {
   const { user } = Route.useRouteContext()
   const { applicationId } = Route.useParams()
   const navigate = useNavigate()
-  const analysis = analyzeBankStatement(data.application)
+  const analysis = data.application.bankAnalysisResult
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -48,19 +47,21 @@ function BranchOfficerBankStatement() {
             </Button>
           </div>
 
-          <div className="mb-6 flex items-start gap-2 rounded-2xl bg-[var(--corio-green-100)] p-4">
-            <div className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--corio-green-600)] text-white">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} className="size-3">
-                <path d="M20 6 9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+          {analysis && (
+            <div className="mb-6 flex items-start gap-2 rounded-2xl bg-[var(--corio-green-100)] p-4">
+              <div className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--corio-green-600)] text-white">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} className="size-3">
+                  <path d="M20 6 9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <p className="text-sm font-medium text-[var(--corio-green-600)]">Recommendation</p>
+                <p className="text-sm text-[var(--corio-neutral-600)]">{RECOMMENDATION[analysis.riskLevel]}</p>
+              </div>
             </div>
-            <div className="flex flex-col gap-0.5">
-              <p className="text-sm font-medium text-[var(--corio-green-600)]">Recommendation</p>
-              <p className="text-sm text-[var(--corio-neutral-600)]">{RECOMMENDATION[analysis.riskLevel]}</p>
-            </div>
-          </div>
+          )}
 
-          <BankStatementReport application={data.application} />
+          <BankStatementReport analysis={analysis} />
         </main>
       </div>
     </div>
