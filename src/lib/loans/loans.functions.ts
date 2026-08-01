@@ -234,16 +234,17 @@ export const createApplicationFn = createServerFn({ method: 'POST' })
       actorUserId: context.user.id,
     })
 
-    const { writeUploadedFile } = await import('#/lib/documents/storage.server')
+    const { writeUploadedFile, fileToDataUrl } = await import('#/lib/documents/storage.server')
     for (let i = 0; i < files.length; i++) {
       const file = files[i]
       if (!file || file.size === 0) continue
-      const storedPath = await writeUploadedFile(application.id, file)
+      const [storedPath, dataUrl] = await Promise.all([writeUploadedFile(application.id, file), fileToDataUrl(file)])
       await db.insert(documents).values({
         loanApplicationId: application.id,
         uploadedByUserId: context.user.id,
         fileName: file.name,
         storedPath,
+        dataUrl,
         mimeType: file.type || 'application/octet-stream',
         fileSize: file.size,
         documentType: fileLabels[i] ?? 'other',
