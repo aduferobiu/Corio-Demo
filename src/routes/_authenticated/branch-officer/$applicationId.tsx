@@ -12,9 +12,11 @@ import { usePoll } from '#/lib/hooks/use-poll'
 import {
   approveByBranchFn,
   declineByBranchFn,
+  deleteAttachmentFn,
   deleteBankStatementFn,
   getApplicationFn,
   postQueryMessageFn,
+  uploadAttachmentFn,
   uploadBankStatementFn,
 } from '#/lib/loans/loans.functions'
 import { queryThreadSearchValidator } from '#/lib/loans/query-search'
@@ -39,6 +41,8 @@ function BranchOfficerApplicationDetail() {
   const decline = useServerFn(declineByBranchFn)
   const uploadBankStatement = useServerFn(uploadBankStatementFn)
   const deleteBankStatement = useServerFn(deleteBankStatementFn)
+  const uploadAttachment = useServerFn(uploadAttachmentFn)
+  const deleteAttachment = useServerFn(deleteAttachmentFn)
   const markQueryRead = useServerFn(markQueryNotificationsReadFn)
 
   const [approveOpen, setApproveOpen] = useState(false)
@@ -93,6 +97,29 @@ function BranchOfficerApplicationDetail() {
               toast.success('Bank statement removed')
             } catch (err) {
               toast.error(err instanceof Error ? err.message : 'Failed to remove bank statement')
+            }
+          }}
+          onUploadAttachment={async (documentType, file) => {
+            const formData = new FormData()
+            formData.set('applicationId', applicationId)
+            formData.set('documentType', documentType)
+            formData.set('file', file)
+            try {
+              await uploadAttachment({ data: formData })
+              await router.invalidate()
+              toast.success('Attachment added')
+            } catch (err) {
+              toast.error(err instanceof Error ? err.message : 'Failed to add attachment')
+              throw err
+            }
+          }}
+          onDeleteAttachment={async (documentId) => {
+            try {
+              await deleteAttachment({ data: { documentId } })
+              await router.invalidate()
+              toast.success('Attachment removed')
+            } catch (err) {
+              toast.error(err instanceof Error ? err.message : 'Failed to remove attachment')
             }
           }}
           hasUnreadQuery={data.hasUnreadQuery}

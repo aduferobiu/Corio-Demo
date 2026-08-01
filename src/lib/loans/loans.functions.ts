@@ -6,6 +6,7 @@ import { db } from '#/db/client'
 import { comments, customers, documents, loanApplications, loanStatusHistory, notifications, users } from '#/db/schema'
 import { authMiddleware, requireRole } from '#/lib/auth/middleware'
 import { ROLE_APPLICATION_DETAIL } from '#/lib/auth/role-routes'
+import { ATTACHMENT_TYPES } from '#/lib/loans/attachment-types'
 
 function generateReferenceNumber() {
   const year = new Date().getFullYear()
@@ -366,9 +367,11 @@ export const postQueryMessageFn = createServerFn({ method: 'POST' })
         if (resumeStatus === 'with_credit' && u.role === 'credit_officer') addRecipient(u)
       }
     }
-    // MD and admin keep full cross-stage oversight regardless of who currently owns it.
+    // Admin keeps full cross-stage oversight regardless of who currently owns it.
+    // MD is deliberately excluded — MD can act on any application but shouldn't
+    // be paged on every query unless they're the one who needs to respond.
     for (const u of allUsers) {
-      if (u.role === 'md' || u.role === 'admin') addRecipient(u)
+      if (u.role === 'admin') addRecipient(u)
     }
 
     if (recipients.size > 0) {
@@ -695,11 +698,12 @@ export const runBankAnalysisFn = createServerFn({ method: 'POST' })
     return application
   })
 
-// Branch officers can attach multiple bank statements while an application is still
-// under review. Once runBankAnalysisFn has run, the list is locked — no further
+// Branch officer, loan officer, MD, and admin can attach a bank statement while
+// an application is still under review — most usefully when none was attached
+// at all. Once runBankAnalysisFn has run, the list is locked — no further
 // statements can be added or removed, since the analysis report already reflects them.
 export const uploadBankStatementFn = createServerFn({ method: 'POST' })
-  .middleware([requireRole('branch_officer')])
+  .middleware([requireRole('branch_officer', 'loan_officer', 'md', 'admin')])
   .validator((formData: unknown) => {
     if (!(formData instanceof FormData)) throw new Error('Expected FormData')
     const applicationId = formData.get('applicationId')
@@ -711,6 +715,9 @@ export const uploadBankStatementFn = createServerFn({ method: 'POST' })
   .handler(async ({ context, data }) => {
     const [application] = await db.select().from(loanApplications).where(eq(loanApplications.id, data.applicationId)).limit(1)
     if (!application) throw new Error('Not found')
+    if (['loan_officer', 'admin'].includes(context.user.role) && application.createdByUserId !== context.user.id) {
+      throw new Error('Not found')
+    }
     if (application.bankAnalysisRunAt) throw new Error('Bank statement analysis has already been run for this application')
 
     const { writeUploadedFile, fileToDataUrl } = await import('#/lib/documents/storage.server')
@@ -731,7 +738,7 @@ export const uploadBankStatementFn = createServerFn({ method: 'POST' })
   })
 
 export const deleteBankStatementFn = createServerFn({ method: 'POST' })
-  .middleware([requireRole('branch_officer')])
+  .middleware([requireRole('branch_officer', 'credit_officer')])
   .validator(z.object({ documentId: z.string() }))
   .handler(async ({ data }) => {
     const [document] = await db.select().from(documents).where(eq(documents.id, data.documentId)).limit(1)
@@ -739,6 +746,63 @@ export const deleteBankStatementFn = createServerFn({ method: 'POST' })
 
     const [application] = await db.select().from(loanApplications).where(eq(loanApplications.id, document.loanApplicationId)).limit(1)
     if (application?.bankAnalysisRunAt) throw new Error('Bank statement analysis has already been run for this application')
+
+    await db.delete(documents).where(eq(documents.id, data.documentId))
+    return { ok: true }
+  })
+
+// Any active reviewer can attach a document that wasn't part of the original
+// submission, following the same category taxonomy used at creation time.
+export const uploadAttachmentFn = createServerFn({ method: 'POST' })
+  .middleware([requireRole('branch_officer', 'credit_officer', 'loan_officer', 'md', 'admin')])
+  .validator((formData: unknown) => {
+    if (!(formData instanceof FormData)) throw new Error('Expected FormData')
+    const applicationId = formData.get('applicationId')
+    const documentType = formData.get('documentType')
+    const file = formData.get('file')
+    if (typeof applicationId !== 'string') throw new Error('Invalid application')
+    if (!ATTACHMENT_TYPES.includes(documentType as (typeof ATTACHMENT_TYPES)[number])) throw new Error('Invalid document type')
+    if (!(file instanceof File) || file.size === 0) throw new Error('A file is required')
+    return { applicationId, documentType: documentType as string, file }
+  })
+  .handler(async ({ context, data }) => {
+    const [application] = await db.select().from(loanApplications).where(eq(loanApplications.id, data.applicationId)).limit(1)
+    if (!application) throw new Error('Not found')
+    if (['loan_officer', 'admin'].includes(context.user.role) && application.createdByUserId !== context.user.id) {
+      throw new Error('Not found')
+    }
+    if (['approved', 'declined'].includes(application.status)) throw new Error('A decision has already been made on this application')
+
+    const { writeUploadedFile, fileToDataUrl } = await import('#/lib/documents/storage.server')
+    const [storedPath, dataUrl] = await Promise.all([writeUploadedFile(application.id, data.file), fileToDataUrl(data.file)])
+
+    await db.insert(documents).values({
+      loanApplicationId: application.id,
+      uploadedByUserId: context.user.id,
+      fileName: data.file.name,
+      storedPath,
+      dataUrl,
+      mimeType: data.file.type || 'application/octet-stream',
+      fileSize: data.file.size,
+      documentType: data.documentType,
+    })
+
+    return { ok: true }
+  })
+
+export const deleteAttachmentFn = createServerFn({ method: 'POST' })
+  .middleware([requireRole('branch_officer', 'credit_officer')])
+  .validator(z.object({ documentId: z.string() }))
+  .handler(async ({ data }) => {
+    const [document] = await db.select().from(documents).where(eq(documents.id, data.documentId)).limit(1)
+    if (!document || document.documentType === 'Bank Statement' || document.documentType === 'Query Attachment') {
+      throw new Error('Not found')
+    }
+
+    const [application] = await db.select().from(loanApplications).where(eq(loanApplications.id, document.loanApplicationId)).limit(1)
+    if (application && ['approved', 'declined'].includes(application.status)) {
+      throw new Error('A decision has already been made on this application')
+    }
 
     await db.delete(documents).where(eq(documents.id, data.documentId))
     return { ok: true }

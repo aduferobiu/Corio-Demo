@@ -10,7 +10,14 @@ import { Sidebar } from '#/components/loans/sidebar'
 import { Button } from '#/components/ui/button'
 import { usePoll } from '#/lib/hooks/use-poll'
 import { riskSummary } from '#/lib/loans/bank-analysis'
-import { approveByMdFn, declineByMdFn, getApplicationFn, postQueryMessageFn } from '#/lib/loans/loans.functions'
+import {
+  approveByMdFn,
+  declineByMdFn,
+  getApplicationFn,
+  postQueryMessageFn,
+  uploadAttachmentFn,
+  uploadBankStatementFn,
+} from '#/lib/loans/loans.functions'
 import { queryThreadSearchValidator } from '#/lib/loans/query-search'
 import { markQueryNotificationsReadFn } from '#/lib/notifications/notifications.functions'
 
@@ -31,6 +38,8 @@ function MdApplicationDetail() {
   const postQueryMessage = useServerFn(postQueryMessageFn)
   const approve = useServerFn(approveByMdFn)
   const decline = useServerFn(declineByMdFn)
+  const uploadBankStatement = useServerFn(uploadBankStatementFn)
+  const uploadAttachment = useServerFn(uploadAttachmentFn)
   const markQueryRead = useServerFn(markQueryNotificationsReadFn)
 
   const [approveOpen, setApproveOpen] = useState(false)
@@ -61,6 +70,33 @@ function MdApplicationDetail() {
             await router.invalidate()
           }}
           bankStatementReportHref={`/md/${applicationId}/bank-statement`}
+          onUploadBankStatement={async (file) => {
+            const formData = new FormData()
+            formData.set('applicationId', applicationId)
+            formData.set('file', file)
+            try {
+              await uploadBankStatement({ data: formData })
+              await router.invalidate()
+              toast.success('Bank statement uploaded')
+            } catch (err) {
+              toast.error(err instanceof Error ? err.message : 'Failed to upload bank statement')
+              throw err
+            }
+          }}
+          onUploadAttachment={async (documentType, file) => {
+            const formData = new FormData()
+            formData.set('applicationId', applicationId)
+            formData.set('documentType', documentType)
+            formData.set('file', file)
+            try {
+              await uploadAttachment({ data: formData })
+              await router.invalidate()
+              toast.success('Attachment added')
+            } catch (err) {
+              toast.error(err instanceof Error ? err.message : 'Failed to add attachment')
+              throw err
+            }
+          }}
           auditTrail={data.history}
           openQueryOnMount={search.openQuery === true}
           hasUnreadQuery={data.hasUnreadQuery}

@@ -3,6 +3,7 @@ import { Link } from '@tanstack/react-router'
 import { ChevronRight, FileText, History, Plus, Trash2 } from 'lucide-react'
 
 import { Button } from '#/components/ui/button'
+import { AddAttachmentModal } from '#/components/loans/add-attachment-modal'
 import { AuditTrailPanel } from '#/components/loans/audit-trail-panel'
 import { BankStatementUploadModal } from '#/components/loans/bank-statement-upload-modal'
 import { DocumentPreviewModal } from '#/components/documents/document-preview-modal'
@@ -82,6 +83,8 @@ export function ApplicationDetailView({
   onRunBankAnalysis,
   onUploadBankStatement,
   onDeleteBankStatement,
+  onUploadAttachment,
+  onDeleteAttachment,
   auditTrail,
   hasUnreadQuery,
   onOpenQueryThread,
@@ -99,6 +102,8 @@ export function ApplicationDetailView({
   onRunBankAnalysis?: () => void
   onUploadBankStatement?: (file: File) => Promise<void>
   onDeleteBankStatement?: (documentId: string) => Promise<void>
+  onUploadAttachment?: (documentType: string, file: File) => Promise<void>
+  onDeleteAttachment?: (documentId: string) => Promise<void>
   auditTrail?: AuditEntry[]
   hasUnreadQuery?: boolean
   onOpenQueryThread?: () => void
@@ -108,6 +113,7 @@ export function ApplicationDetailView({
 }) {
   const [queryOpen, setQueryOpen] = useState(Boolean(openQueryOnMount))
   const [uploadStatementOpen, setUploadStatementOpen] = useState(false)
+  const [addAttachmentOpen, setAddAttachmentOpen] = useState(false)
   const [auditTrailOpen, setAuditTrailOpen] = useState(false)
   const [previewDoc, setPreviewDoc] = useState<DocumentRow | null>(null)
 
@@ -123,6 +129,9 @@ export function ApplicationDetailView({
   // may still need to attach an updated statement while a query is outstanding.
   const statementsLocked =
     Boolean(bankAnalysisRunAt) || ['with_credit', 'approved', 'declined'].includes(application.status)
+  // Once a decision has been made there's nothing left to review, so adding or
+  // removing supporting documents no longer makes sense.
+  const attachmentsLocked = ['approved', 'declined'].includes(application.status)
   const otherDocs = documents.filter((d) => d.documentType !== 'Bank Statement' && d.documentType !== 'Query Attachment')
   const threadAttachments = documents.filter((d) => d.commentId)
   const employerOrBusiness = application.employmentType === 'self_employed' ? application.businessName : application.employerName
@@ -223,7 +232,21 @@ export function ApplicationDetailView({
         </div>
 
         <div className="flex w-full flex-col gap-6 xl:w-[426px] xl:shrink-0">
-          <Card title="Attachments">
+          <Card
+            title="Attachments"
+            action={
+              onUploadAttachment && !attachmentsLocked ? (
+                <button
+                  type="button"
+                  onClick={() => setAddAttachmentOpen(true)}
+                  className="flex items-center gap-1 text-sm font-medium text-[var(--corio-blue-500)]"
+                >
+                  <Plus className="size-5" />
+                  Add Document
+                </button>
+              ) : undefined
+            }
+          >
             {otherDocs.length === 0 && <p className="text-sm text-[var(--corio-neutral-400)]">No supporting documents uploaded.</p>}
             {otherDocs.map((doc) => (
               <div key={doc.id} className="flex flex-col gap-2 w-full">
@@ -235,6 +258,19 @@ export function ApplicationDetailView({
                 >
                   <FileText className="size-4 text-[var(--corio-blue-500)]" />
                   <span className="text-xs font-medium text-[var(--corio-neutral-900)]">{doc.fileName}</span>
+                  {onDeleteAttachment && !attachmentsLocked && (
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onDeleteAttachment(doc.id)
+                      }}
+                      className="ml-1 text-[var(--corio-neutral-400)] hover:text-destructive"
+                    >
+                      <Trash2 className="size-4" />
+                    </span>
+                  )}
                 </button>
               </div>
             ))}
@@ -316,6 +352,15 @@ export function ApplicationDetailView({
 
       {onUploadBankStatement && (
         <BankStatementUploadModal open={uploadStatementOpen} onOpenChange={setUploadStatementOpen} onUpload={onUploadBankStatement} />
+      )}
+
+      {onUploadAttachment && (
+        <AddAttachmentModal
+          open={addAttachmentOpen}
+          onOpenChange={setAddAttachmentOpen}
+          onUpload={onUploadAttachment}
+          existingTypes={otherDocs.map((doc) => doc.documentType)}
+        />
       )}
 
       {auditTrail && <AuditTrailPanel open={auditTrailOpen} onClose={() => setAuditTrailOpen(false)} entries={auditTrail} />}

@@ -10,7 +10,15 @@ import { Sidebar } from '#/components/loans/sidebar'
 import { Button } from '#/components/ui/button'
 import { usePoll } from '#/lib/hooks/use-poll'
 import { riskSummary } from '#/lib/loans/bank-analysis'
-import { approveByCreditFn, getApplicationFn, postQueryMessageFn, rejectByCreditFn } from '#/lib/loans/loans.functions'
+import {
+  approveByCreditFn,
+  deleteAttachmentFn,
+  deleteBankStatementFn,
+  getApplicationFn,
+  postQueryMessageFn,
+  rejectByCreditFn,
+  uploadAttachmentFn,
+} from '#/lib/loans/loans.functions'
 import { queryThreadSearchValidator } from '#/lib/loans/query-search'
 import { markQueryNotificationsReadFn } from '#/lib/notifications/notifications.functions'
 
@@ -31,6 +39,9 @@ function CreditOfficerApplicationDetail() {
   const postQueryMessage = useServerFn(postQueryMessageFn)
   const approve = useServerFn(approveByCreditFn)
   const reject = useServerFn(rejectByCreditFn)
+  const deleteBankStatement = useServerFn(deleteBankStatementFn)
+  const uploadAttachment = useServerFn(uploadAttachmentFn)
+  const deleteAttachment = useServerFn(deleteAttachmentFn)
   const markQueryRead = useServerFn(markQueryNotificationsReadFn)
 
   const [approveOpen, setApproveOpen] = useState(false)
@@ -61,6 +72,38 @@ function CreditOfficerApplicationDetail() {
             await router.invalidate()
           }}
           bankStatementReportHref={`/credit-officer/${applicationId}/bank-statement`}
+          onDeleteBankStatement={async (documentId) => {
+            try {
+              await deleteBankStatement({ data: { documentId } })
+              await router.invalidate()
+              toast.success('Bank statement removed')
+            } catch (err) {
+              toast.error(err instanceof Error ? err.message : 'Failed to remove bank statement')
+            }
+          }}
+          onUploadAttachment={async (documentType, file) => {
+            const formData = new FormData()
+            formData.set('applicationId', applicationId)
+            formData.set('documentType', documentType)
+            formData.set('file', file)
+            try {
+              await uploadAttachment({ data: formData })
+              await router.invalidate()
+              toast.success('Attachment added')
+            } catch (err) {
+              toast.error(err instanceof Error ? err.message : 'Failed to add attachment')
+              throw err
+            }
+          }}
+          onDeleteAttachment={async (documentId) => {
+            try {
+              await deleteAttachment({ data: { documentId } })
+              await router.invalidate()
+              toast.success('Attachment removed')
+            } catch (err) {
+              toast.error(err instanceof Error ? err.message : 'Failed to remove attachment')
+            }
+          }}
           auditTrail={data.history}
           openQueryOnMount={search.openQuery === true}
           hasUnreadQuery={data.hasUnreadQuery}
