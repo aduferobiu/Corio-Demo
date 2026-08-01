@@ -149,14 +149,10 @@ export function ApplicationDetailView({
         </div>
         <div className="flex flex-wrap items-center gap-4">
           {auditTrail && (
-            <button
-              type="button"
-              title="Audit trail"
-              onClick={() => setAuditTrailOpen((v) => !v)}
-              className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-[var(--corio-neutral-200)] text-[var(--corio-neutral-500)] hover:bg-[var(--corio-neutral-100)]"
-            >
-              <History className="size-4.5" />
-            </button>
+            <Button variant="outline" size="sm" className="h-9" onClick={() => setAuditTrailOpen((v) => !v)}>
+              <History className="size-4" />
+              Audit Trail
+            </Button>
           )}
           <Button
             variant="outline"
