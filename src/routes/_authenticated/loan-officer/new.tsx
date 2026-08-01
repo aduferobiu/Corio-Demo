@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useServerFn } from '@tanstack/react-start'
-import { X } from 'lucide-react'
+import { Check, X } from 'lucide-react'
 
 import { FileUploadArea } from '#/components/loans/file-upload-area'
 import { ProgressTracker, type WizardStep } from '#/components/loans/progress-tracker'
@@ -187,9 +187,7 @@ function NewLoanApplication() {
         <div className="flex w-[460px] max-w-full flex-col gap-6 rounded-2xl bg-white p-6">
           <div className="flex flex-col items-center gap-5">
             <div className="flex items-center rounded-full bg-[var(--corio-green-100)] p-3 text-[var(--corio-green-600)]">
-              <svg className="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                <path d="M12 9v4m0 4h.01M10.29 3.86l-8.18 14.18A2 2 0 0 0 3.82 21h16.36a2 2 0 0 0 1.71-2.96L13.71 3.86a2 2 0 0 0-3.42 0Z" />
-              </svg>
+              <Check className="size-6" strokeWidth={2} />
             </div>
             <div className="flex flex-col items-center gap-1.5 text-center">
               <h2 className="text-xl font-semibold text-[var(--corio-neutral-900)]">Application Submitted</h2>
