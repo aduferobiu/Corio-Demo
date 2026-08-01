@@ -3,6 +3,7 @@ import { FileText, X } from 'lucide-react'
 
 import { Button } from '#/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '#/components/ui/tabs'
+import { DocumentPreviewContent } from '#/components/documents/document-preview-modal'
 import { formatDate, formatTime } from '#/lib/loans/format'
 import { cn } from '#/lib/utils'
 
@@ -87,24 +88,8 @@ export function DocumentDetailModal({
         </div>
 
         <div className="flex flex-1 overflow-hidden">
-          <div className="flex flex-1 items-center justify-center bg-[var(--corio-neutral-100)] p-6">
-            {latest?.mimeType.startsWith('image/') && latest.dataUrl ? (
-              <img src={latest.dataUrl} alt={doc.name} className="max-h-full max-w-full rounded-lg object-contain" />
-            ) : latest?.mimeType === 'application/pdf' && latest.dataUrl ? (
-              <iframe src={latest.dataUrl} title={doc.name} className="size-full rounded-lg border border-[var(--corio-neutral-200)] bg-white" />
-            ) : (
-              <div className="flex flex-col items-center gap-3 text-center">
-                <div className="flex size-16 items-center justify-center rounded-2xl bg-white text-destructive">
-                  <FileText className="size-8" />
-                </div>
-                <p className="max-w-[240px] truncate text-sm font-medium text-[var(--corio-neutral-700)]">{latest?.fileName}</p>
-                {latest?.dataUrl && (
-                  <a href={latest.dataUrl} target="_blank" rel="noreferrer" className="text-xs font-medium text-[#155eef] underline">
-                    Open file
-                  </a>
-                )}
-              </div>
-            )}
+          <div className="flex-1 overflow-y-auto bg-[var(--corio-neutral-100)] p-6">
+            <DocumentPreviewContent name={latest?.fileName ?? doc.name} dataUrl={latest?.dataUrl ?? null} mimeType={latest?.mimeType ?? null} />
           </div>
 
           <div className="flex w-[340px] shrink-0 flex-col border-l border-[var(--corio-neutral-100)]">

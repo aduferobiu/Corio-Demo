@@ -56,7 +56,7 @@ function PdfPreview({ dataUrl, name }: { dataUrl: string; name: string }) {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center gap-3 text-center">
+      <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
         <div className="flex size-16 items-center justify-center rounded-2xl bg-white text-destructive">
           <FileText className="size-8" />
         </div>
@@ -69,7 +69,41 @@ function PdfPreview({ dataUrl, name }: { dataUrl: string; name: string }) {
     )
   }
 
-  return <div ref={containerRef} className="size-full overflow-y-auto py-2" />
+  return <div ref={containerRef} className="w-full" />
+}
+
+// The actual preview surface — shared by the standalone preview modal and the
+// document detail modal's split-pane layout, so every attachment preview in
+// the app behaves the same way. The parent is expected to provide a scroll
+// container; this only renders content, unconstrained in height.
+export function DocumentPreviewContent({
+  name,
+  dataUrl,
+  mimeType,
+}: {
+  name: string
+  dataUrl: string | null
+  mimeType: string | null
+}) {
+  if (mimeType?.startsWith('image/') && dataUrl) {
+    return <img src={dataUrl} alt={name} className="mx-auto max-w-full rounded-lg" />
+  }
+  if (mimeType === 'application/pdf' && dataUrl) {
+    return <PdfPreview dataUrl={dataUrl} name={name} />
+  }
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
+      <div className="flex size-16 items-center justify-center rounded-2xl bg-white text-destructive">
+        <FileText className="size-8" />
+      </div>
+      <p className="max-w-[240px] truncate text-sm font-medium text-[var(--corio-neutral-700)]">{name}</p>
+      {dataUrl && (
+        <a href={dataUrl} target="_blank" rel="noreferrer" className="text-xs font-medium text-[#155eef] underline">
+          Open file
+        </a>
+      )}
+    </div>
+  )
 }
 
 export function DocumentPreviewModal({
@@ -96,24 +130,8 @@ export function DocumentPreviewModal({
           </button>
         </div>
 
-        <div className="flex flex-1 items-center justify-center bg-[var(--corio-neutral-100)] p-6">
-          {mimeType?.startsWith('image/') && dataUrl ? (
-            <img src={dataUrl} alt={name} className="max-h-full max-w-full rounded-lg object-contain" />
-          ) : mimeType === 'application/pdf' && dataUrl ? (
-            <PdfPreview dataUrl={dataUrl} name={name} />
-          ) : (
-            <div className="flex flex-col items-center gap-3 text-center">
-              <div className="flex size-16 items-center justify-center rounded-2xl bg-white text-destructive">
-                <FileText className="size-8" />
-              </div>
-              <p className="max-w-[240px] truncate text-sm font-medium text-[var(--corio-neutral-700)]">{name}</p>
-              {dataUrl && (
-                <a href={dataUrl} target="_blank" rel="noreferrer" className="text-xs font-medium text-[#155eef] underline">
-                  Open file
-                </a>
-              )}
-            </div>
-          )}
+        <div className="flex-1 overflow-y-auto bg-[var(--corio-neutral-100)] p-6">
+          <DocumentPreviewContent name={name} dataUrl={dataUrl} mimeType={mimeType} />
         </div>
       </div>
     </div>
