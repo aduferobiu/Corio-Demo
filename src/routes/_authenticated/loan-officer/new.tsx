@@ -181,44 +181,6 @@ function NewLoanApplication() {
     }
   }
 
-  if (result) {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-        <div className="flex w-[460px] max-w-full flex-col gap-6 rounded-2xl bg-white p-6">
-          <div className="flex flex-col items-center gap-5">
-            <div className="flex items-center rounded-full bg-[var(--corio-green-100)] p-3 text-[var(--corio-green-600)]">
-              <Check className="size-6" strokeWidth={2} />
-            </div>
-            <div className="flex flex-col items-center gap-1.5 text-center">
-              <h2 className="text-xl font-semibold text-[var(--corio-neutral-900)]">Application Submitted</h2>
-              <p className="text-sm text-[var(--corio-neutral-400)]">Your application has been received and is now pending Branch Manager review.</p>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-5 rounded-2xl bg-[var(--corio-neutral-100)] p-6">
-            <Row label="Reference Number:" value={result.referenceNumber} />
-            <Row label="Applicant" value={result.applicantName} />
-            <Row label="Loan Amount" value={formatNaira(result.amountRequested)} />
-            <Row label="Submitted" value="Just now" />
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-medium tracking-wider text-[var(--corio-neutral-400)] uppercase">Status</span>
-              <StatusBadge status="submitted" />
-            </div>
-          </div>
-
-          <Button
-            variant="outline"
-            size="lg"
-            className="w-full border-[var(--corio-blue-500)] text-[var(--corio-blue-500)]"
-            onClick={() => navigate({ to: ROLE_LOAN_HOME[user!.role] })}
-          >
-            Back to dashboard
-          </Button>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar user={user!} active="Loan" />
@@ -458,6 +420,42 @@ function NewLoanApplication() {
           )}
         </footer>
       </div>
+
+      {result && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="flex w-[460px] max-w-full flex-col gap-6 rounded-2xl bg-white p-6">
+            <div className="flex flex-col items-center gap-5">
+              <div className="flex items-center rounded-full bg-[var(--corio-green-100)] p-3 text-[var(--corio-green-600)]">
+                <Check className="size-6" strokeWidth={2} />
+              </div>
+              <div className="flex flex-col items-center gap-1.5 text-center">
+                <h2 className="text-xl font-semibold text-[var(--corio-neutral-900)]">Application Submitted</h2>
+                <p className="text-sm text-[var(--corio-neutral-400)]">Your application has been received and is now pending Branch Manager review.</p>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-5 rounded-2xl bg-[var(--corio-neutral-100)] p-6">
+              <Row label="Reference Number:" value={result.referenceNumber} />
+              <Row label="Applicant" value={result.applicantName} />
+              <Row label="Loan Amount" value={formatNaira(result.amountRequested)} />
+              <Row label="Submitted" value="Just now" />
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-medium tracking-wider text-[var(--corio-neutral-400)] uppercase">Status</span>
+                <StatusBadge status="submitted" />
+              </div>
+            </div>
+
+            <Button
+              variant="outline"
+              size="lg"
+              className="w-full border-[var(--corio-blue-500)] text-[var(--corio-blue-500)]"
+              onClick={() => navigate({ to: ROLE_LOAN_HOME[user!.role] })}
+            >
+              Back to dashboard
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
