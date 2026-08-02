@@ -18,6 +18,19 @@ for (const [name, ctor] of Object.entries(webPlatformPolyfills)) {
   }
 }
 
+// pdf-parse's PDFParse also needs pdfjs-dist's worker message handler. Normally it loads that via
+// a dynamic import of a runtime-computed path (GlobalWorkerOptions.workerSrc, resolved relative to
+// pdfjs-dist's own bundled location), but our server bundler rewrites file layout for deployment
+// and that computed path stops resolving there — surfacing as `Setting up fake worker failed:
+// Cannot find module '.../pdf.worker.mjs'` in production, even though it works locally. Importing
+// the worker module directly here, through a path our own bundler can trace statically, and
+// registering it on globalThis.pdfjsWorker lets pdfjs-dist find it without that broken import.
+// @ts-expect-error — pdfjs-dist ships no type declarations for its worker build
+const { WorkerMessageHandler } = await import('pdfjs-dist/legacy/build/pdf.worker.mjs')
+if (!('pdfjsWorker' in globalThis)) {
+  ;(globalThis as Record<string, unknown>).pdfjsWorker = { WorkerMessageHandler }
+}
+
 const SYSTEM_PROMPT = `You are a credit risk analyst at a Nigerian microfinance bank, reviewing a customer's bank statement (extracted as plain text from a PDF) as part of a loan application review.
 
 Analyse the transaction history and produce a structured assessment:
