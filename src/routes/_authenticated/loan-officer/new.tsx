@@ -74,7 +74,6 @@ function NewLoanApplication() {
   const [step, setStep] = useState<WizardStep>('Applicant Information')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [stepError, setStepError] = useState<string | null>(null)
   const [result, setResult] = useState<{ referenceNumber: string; applicantName: string; amountRequested: number } | null>(null)
 
   const [applicant, setApplicant] = useState<ApplicantForm>({
@@ -149,17 +148,12 @@ function NewLoanApplication() {
     return null
   }
 
+  const currentStepValid = step === 'Applicant Information' ? !validateApplicantStep() : step === 'Loan Details' ? !validateLoanDetailsStep() : true
+
   function goNext() {
-    const validationError = step === 'Applicant Information' ? validateApplicantStep() : step === 'Loan Details' ? validateLoanDetailsStep() : null
-    if (validationError) {
-      setStepError(validationError)
-      return
-    }
-    setStepError(null)
     if (stepIndex < STEPS.length - 1) setStep(STEPS[stepIndex + 1])
   }
   function goBack() {
-    setStepError(null)
     if (stepIndex > 0) setStep(STEPS[stepIndex - 1])
   }
 
@@ -352,8 +346,6 @@ function NewLoanApplication() {
                   </Field>
                 </div>
               </Section>
-
-              {stepError && <p className="text-sm text-destructive">{stepError}</p>}
             </div>
           )}
 
@@ -408,8 +400,6 @@ function NewLoanApplication() {
                   <Stat label="Total Amount Due" value={formatNaira(totalDue)} />
                 </div>
               </div>
-
-              {stepError && <p className="text-sm text-destructive">{stepError}</p>}
             </div>
           )}
 
@@ -478,7 +468,9 @@ function NewLoanApplication() {
             </Button>
           )}
           {stepIndex < STEPS.length - 1 ? (
-            <Button onClick={goNext}>Next</Button>
+            <Button onClick={goNext} disabled={!currentStepValid}>
+              Next
+            </Button>
           ) : (
             <Button onClick={handleSubmit} disabled={submitting}>
               {submitting ? 'Submitting…' : 'Submit Application'}

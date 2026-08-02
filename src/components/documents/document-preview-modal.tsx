@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { FileText, X } from 'lucide-react'
+import { Download, FileText, X } from 'lucide-react'
 
 // Chrome's built-in <iframe> PDF viewer follows the OS/browser color scheme
 // and can't be forced light from the embedding page — on a system with dark
@@ -72,6 +72,20 @@ function PdfPreview({ dataUrl, name }: { dataUrl: string; name: string }) {
   return <div ref={containerRef} className="w-full" />
 }
 
+export function DownloadButton({ dataUrl, name }: { dataUrl: string | null; name: string }) {
+  if (!dataUrl) return null
+  return (
+    <a
+      href={dataUrl}
+      download={name}
+      className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[var(--corio-neutral-200)] px-3 py-1.5 text-xs font-medium text-[var(--corio-neutral-700)] hover:bg-[var(--corio-neutral-100)]"
+    >
+      <Download className="size-3.5" />
+      Download
+    </a>
+  )
+}
+
 // The actual preview surface — shared by the standalone preview modal and the
 // document detail modal's split-pane layout, so every attachment preview in
 // the app behaves the same way. The parent is expected to provide a scroll
@@ -123,11 +137,14 @@ export function DocumentPreviewModal({
         className="flex h-[600px] w-[720px] max-w-full flex-col overflow-hidden rounded-2xl bg-white"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex h-14 shrink-0 items-center justify-between border-b border-[var(--corio-neutral-100)] px-6">
+        <div className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-[var(--corio-neutral-100)] px-6">
           <p className="truncate text-sm font-medium text-[var(--corio-neutral-900)]">{name}</p>
-          <button type="button" onClick={onClose} className="text-[var(--corio-neutral-400)] hover:text-[var(--corio-neutral-900)]">
-            <X className="size-5" />
-          </button>
+          <div className="flex shrink-0 items-center gap-3">
+            <DownloadButton dataUrl={dataUrl} name={name} />
+            <button type="button" onClick={onClose} className="text-[var(--corio-neutral-400)] hover:text-[var(--corio-neutral-900)]">
+              <X className="size-5" />
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto bg-[var(--corio-neutral-100)] p-6">

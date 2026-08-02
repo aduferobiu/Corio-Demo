@@ -3,7 +3,7 @@ import { FileText, X } from 'lucide-react'
 
 import { Button } from '#/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '#/components/ui/tabs'
-import { DocumentPreviewContent } from '#/components/documents/document-preview-modal'
+import { DocumentPreviewContent, DownloadButton } from '#/components/documents/document-preview-modal'
 import { formatDate, formatTime } from '#/lib/loans/format'
 import { cn } from '#/lib/utils'
 
@@ -80,11 +80,14 @@ export function DocumentDetailModal({
         className="flex h-[600px] w-[960px] max-w-full flex-col overflow-hidden rounded-2xl bg-white"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex h-14 shrink-0 items-center justify-between border-b border-[var(--corio-neutral-100)] px-6">
-          <p className="text-sm font-medium text-[var(--corio-neutral-900)]">{doc.name}</p>
-          <button type="button" onClick={onClose} className="text-[var(--corio-neutral-400)] hover:text-[var(--corio-neutral-900)]">
-            <X className="size-5" />
-          </button>
+        <div className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-[var(--corio-neutral-100)] px-6">
+          <p className="truncate text-sm font-medium text-[var(--corio-neutral-900)]">{doc.name}</p>
+          <div className="flex shrink-0 items-center gap-3">
+            <DownloadButton dataUrl={latest?.dataUrl ?? null} name={latest?.fileName ?? doc.name} />
+            <button type="button" onClick={onClose} className="text-[var(--corio-neutral-400)] hover:text-[var(--corio-neutral-900)]">
+              <X className="size-5" />
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-1 overflow-hidden">
