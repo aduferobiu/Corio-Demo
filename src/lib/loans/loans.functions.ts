@@ -1,4 +1,4 @@
-import { and, desc, eq, like, or } from 'drizzle-orm'
+import { and, desc, eq, inArray, like, or } from 'drizzle-orm'
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
@@ -92,29 +92,17 @@ export const getApplicationFn = createServerFn({ method: 'GET' })
     }
   })
 
-export const listCreditQueueFn = createServerFn({ method: 'GET' })
+// Every application that has reached credit review — currently pending, or already
+// decided — so approved/declined loans stay visible here instead of only showing the
+// still-pending queue.
+export const listCreditApplicationsFn = createServerFn({ method: 'GET' })
   .middleware([requireRole('credit_officer')])
   .handler(async () => {
     return db
       .select()
       .from(loanApplications)
-      .where(eq(loanApplications.status, 'with_credit'))
+      .where(inArray(loanApplications.status, ['with_credit', 'approved', 'declined']))
       .orderBy(desc(loanApplications.updatedAt))
-  })
-
-export const getCreditStatsFn = createServerFn({ method: 'GET' })
-  .middleware([requireRole('credit_officer')])
-  .handler(async () => {
-    const all = await db.select().from(loanApplications)
-    const approved = all.filter((a) => a.status === 'approved')
-    const declined = all.filter((a) => a.status === 'declined')
-    const pending = all.filter((a) => a.status === 'with_credit')
-    return {
-      totalAmount: approved.reduce((sum, a) => sum + a.amountRequested, 0),
-      totalApproved: approved.length,
-      totalDeclined: declined.length,
-      totalPending: pending.length,
-    }
   })
 
 const applicantSchema = z.object({
