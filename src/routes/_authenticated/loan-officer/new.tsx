@@ -204,8 +204,9 @@ function NewLoanApplication() {
             : 'The application was submitted, but some attached documents failed to upload. Please add the missing ones from the application page.',
         )
       }
-    } catch {
-      setError('Something went wrong submitting the application. Please try again.')
+    } catch (err) {
+      console.error('Failed to submit application', err)
+      setError(err instanceof Error ? err.message : 'Something went wrong submitting the application. Please try again.')
     } finally {
       setSubmitting(false)
     }
