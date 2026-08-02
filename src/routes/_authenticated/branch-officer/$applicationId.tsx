@@ -48,7 +48,9 @@ function BranchOfficerApplicationDetail() {
   const [approveOpen, setApproveOpen] = useState(false)
   const [declineOpen, setDeclineOpen] = useState(false)
 
-  const canDecide = data.application.status === 'submitted'
+  // A query can be raised while the application is with branch review — the reviewer
+  // shouldn't lose the ability to decide just because a query is open.
+  const canDecide = data.application.status === 'submitted' || (data.application.status === 'queried' && data.application.preQueryStatus === 'submitted')
   const isDecided = ['approved', 'declined'].includes(data.application.status)
 
   usePoll(() => router.invalidate(), 5000)

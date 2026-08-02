@@ -47,7 +47,9 @@ function CreditOfficerApplicationDetail() {
   const [approveOpen, setApproveOpen] = useState(false)
   const [declineOpen, setDeclineOpen] = useState(false)
 
-  const canDecide = data.application.status === 'with_credit'
+  // A query can be raised while the application is with credit review — the reviewer
+  // shouldn't lose the ability to decide just because a query is open.
+  const canDecide = data.application.status === 'with_credit' || (data.application.status === 'queried' && data.application.preQueryStatus === 'with_credit')
   const isDecided = ['approved', 'declined'].includes(data.application.status)
 
   usePoll(() => router.invalidate(), 5000)

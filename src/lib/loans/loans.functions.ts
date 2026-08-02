@@ -396,12 +396,17 @@ export const approveByCreditFn = createServerFn({ method: 'POST' })
   .handler(async ({ context, data }) => {
     const [application] = await db.select().from(loanApplications).where(eq(loanApplications.id, data.applicationId)).limit(1)
     if (!application) throw new Error('Not found')
-    if (application.status !== 'with_credit') throw new Error('Application is not awaiting credit review')
+    // A query can be raised while the application is with credit review — the reviewer
+    // shouldn't lose the ability to decide just because a query is open.
+    if (application.status !== 'with_credit' && !(application.status === 'queried' && application.preQueryStatus === 'with_credit')) {
+      throw new Error('Application is not awaiting credit review')
+    }
 
     await db
       .update(loanApplications)
       .set({
         status: 'approved',
+        preQueryStatus: null,
         decidedByUserId: context.user.id,
         decisionNotes: data.notes || null,
         decidedAt: new Date(),
@@ -411,7 +416,7 @@ export const approveByCreditFn = createServerFn({ method: 'POST' })
 
     await db.insert(loanStatusHistory).values({
       loanApplicationId: application.id,
-      fromStatus: 'with_credit',
+      fromStatus: application.status,
       toStatus: 'approved',
       actorUserId: context.user.id,
       note: data.notes,
@@ -435,12 +440,15 @@ export const rejectByCreditFn = createServerFn({ method: 'POST' })
   .handler(async ({ context, data }) => {
     const [application] = await db.select().from(loanApplications).where(eq(loanApplications.id, data.applicationId)).limit(1)
     if (!application) throw new Error('Not found')
-    if (application.status !== 'with_credit') throw new Error('Application is not awaiting credit review')
+    if (application.status !== 'with_credit' && !(application.status === 'queried' && application.preQueryStatus === 'with_credit')) {
+      throw new Error('Application is not awaiting credit review')
+    }
 
     await db
       .update(loanApplications)
       .set({
         status: 'declined',
+        preQueryStatus: null,
         decidedByUserId: context.user.id,
         decisionNotes: data.notes,
         decidedAt: new Date(),
@@ -450,7 +458,7 @@ export const rejectByCreditFn = createServerFn({ method: 'POST' })
 
     await db.insert(loanStatusHistory).values({
       loanApplicationId: application.id,
-      fromStatus: 'with_credit',
+      fromStatus: application.status,
       toStatus: 'declined',
       actorUserId: context.user.id,
       note: data.notes,
@@ -474,7 +482,11 @@ export const approveByBranchFn = createServerFn({ method: 'POST' })
   .handler(async ({ context, data }) => {
     const [application] = await db.select().from(loanApplications).where(eq(loanApplications.id, data.applicationId)).limit(1)
     if (!application) throw new Error('Not found')
-    if (application.status !== 'submitted') throw new Error('Application is not awaiting branch review')
+    // A query can be raised while the application is with branch review — the reviewer
+    // shouldn't lose the ability to decide just because a query is open.
+    if (application.status !== 'submitted' && !(application.status === 'queried' && application.preQueryStatus === 'submitted')) {
+      throw new Error('Application is not awaiting branch review')
+    }
 
     const statements = await db.select().from(documents).where(eq(documents.loanApplicationId, application.id))
     if (!statements.some((d) => d.documentType === 'Bank Statement')) {
@@ -483,12 +495,12 @@ export const approveByBranchFn = createServerFn({ method: 'POST' })
 
     await db
       .update(loanApplications)
-      .set({ status: 'with_credit', updatedAt: new Date() })
+      .set({ status: 'with_credit', preQueryStatus: null, updatedAt: new Date() })
       .where(eq(loanApplications.id, application.id))
 
     await db.insert(loanStatusHistory).values({
       loanApplicationId: application.id,
-      fromStatus: 'submitted',
+      fromStatus: application.status,
       toStatus: 'with_credit',
       actorUserId: context.user.id,
       note: data.notes,
@@ -526,12 +538,15 @@ export const declineByBranchFn = createServerFn({ method: 'POST' })
   .handler(async ({ context, data }) => {
     const [application] = await db.select().from(loanApplications).where(eq(loanApplications.id, data.applicationId)).limit(1)
     if (!application) throw new Error('Not found')
-    if (application.status !== 'submitted') throw new Error('Application is not awaiting branch review')
+    if (application.status !== 'submitted' && !(application.status === 'queried' && application.preQueryStatus === 'submitted')) {
+      throw new Error('Application is not awaiting branch review')
+    }
 
     await db
       .update(loanApplications)
       .set({
         status: 'declined',
+        preQueryStatus: null,
         decidedByUserId: context.user.id,
         decisionNotes: data.notes,
         decidedAt: new Date(),
@@ -541,7 +556,7 @@ export const declineByBranchFn = createServerFn({ method: 'POST' })
 
     await db.insert(loanStatusHistory).values({
       loanApplicationId: application.id,
-      fromStatus: 'submitted',
+      fromStatus: application.status,
       toStatus: 'declined',
       actorUserId: context.user.id,
       note: data.notes,
@@ -584,6 +599,7 @@ export const approveByMdFn = createServerFn({ method: 'POST' })
       .update(loanApplications)
       .set({
         status: 'approved',
+        preQueryStatus: null,
         decidedByUserId: context.user.id,
         decisionNotes: data.notes || null,
         decidedAt: new Date(),
@@ -627,6 +643,7 @@ export const declineByMdFn = createServerFn({ method: 'POST' })
       .update(loanApplications)
       .set({
         status: 'declined',
+        preQueryStatus: null,
         decidedByUserId: context.user.id,
         decisionNotes: data.notes,
         decidedAt: new Date(),
