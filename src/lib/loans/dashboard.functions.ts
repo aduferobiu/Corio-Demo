@@ -49,7 +49,6 @@ export const getCreditOfficerDashboardFn = createServerFn({ method: 'GET' })
 
     const now = new Date()
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-    const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
 
     const awaitingReview = applications
       .filter((a) => a.status === 'with_credit')
@@ -66,11 +65,12 @@ export const getCreditOfficerDashboardFn = createServerFn({ method: 'GET' })
       ? decisionTimesHours.reduce((sum, v) => sum + v, 0) / decisionTimesHours.length
       : 0
 
-    const actionedToday = decidedByMe
-      .filter((a) => a.decidedAt! >= dayStart)
-      .sort((a, b) => b.decidedAt!.getTime() - a.decidedAt!.getTime())
+    // Every application this officer has decided stays visible here (scoped to the
+    // selected date range like the rest of the dashboard) rather than dropping off
+    // after the day it was actioned — the status badge reflects the outcome.
+    const myDecisions = decidedByMe.sort((a, b) => b.decidedAt!.getTime() - a.decidedAt!.getTime())
 
-    return { awaitingReview, approvedThisMonth, declinedThisMonth, avgDecisionHours, actionedToday }
+    return { awaitingReview, approvedThisMonth, declinedThisMonth, avgDecisionHours, myDecisions }
   })
 
 // Shared by MD (all branches) and branch officer (own branch only).

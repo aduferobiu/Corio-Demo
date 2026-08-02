@@ -84,7 +84,7 @@ function CreditOfficerDashboard() {
           </div>
 
           <div className="flex flex-col gap-3">
-            <h2 className="text-sm font-semibold text-[var(--corio-neutral-900)]">Actioned Today</h2>
+            <h2 className="text-sm font-semibold text-[var(--corio-neutral-900)]">My Decisions</h2>
             <div className="overflow-hidden rounded-lg border border-[var(--corio-neutral-100)]">
               <Table>
                 <TableHeader>
@@ -96,14 +96,14 @@ function CreditOfficerDashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {data.actionedToday.length === 0 && (
+                  {data.myDecisions.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={4} className="py-10 text-center text-sm text-[var(--corio-neutral-400)]">
-                        Nothing actioned yet today.
+                        No decisions in this range yet.
                       </TableCell>
                     </TableRow>
                   )}
-                  {data.actionedToday.map((app) => (
+                  {data.myDecisions.map((app) => (
                     <TableRow
                       key={app.id}
                       className="cursor-pointer"
