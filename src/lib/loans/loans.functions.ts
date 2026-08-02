@@ -127,6 +127,22 @@ const applicantSchema = z.object({
   totalAmountDue: z.coerce.number().int().nonnegative(),
 })
 
+const APPLICANT_FIELD_LABELS: Record<string, string> = {
+  customerId: 'Customer',
+  firstName: 'First name',
+  lastName: 'Last name',
+  applicantPhone: 'Phone number',
+  employmentType: 'Employment type',
+  employerName: 'Employer name',
+  businessName: 'Business name',
+  monthlyIncome: 'Monthly income',
+  guarantorName: 'Guarantor name',
+  guarantorPhone: 'Guarantor phone number',
+  loanType: 'Loan type',
+  amountRequested: 'Loan amount',
+  loanDurationMonths: 'Loan duration',
+}
+
 // Files are uploaded separately (via uploadAttachmentFn/uploadBankStatementFn) once the
 // application exists, rather than bundled into this request — a submission with several
 // scanned documents can otherwise exceed serverless request-body limits.
@@ -135,7 +151,13 @@ export const createApplicationFn = createServerFn({ method: 'POST' })
   .validator((formData: unknown) => {
     if (!(formData instanceof FormData)) throw new Error('Expected FormData')
     const raw = Object.fromEntries(formData.entries())
-    const fields = applicantSchema.parse(raw)
+    const parsed = applicantSchema.safeParse(raw)
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0]
+      const field = issue ? APPLICANT_FIELD_LABELS[String(issue.path[0])] ?? String(issue.path[0]) : undefined
+      throw new Error(field ? `${field} is missing or invalid` : 'Some application details are missing or invalid')
+    }
+    const fields = parsed.data
     return { fields }
   })
   .handler(async ({ context, data }) => {

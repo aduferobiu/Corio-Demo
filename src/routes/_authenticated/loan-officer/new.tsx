@@ -74,6 +74,7 @@ function NewLoanApplication() {
   const [step, setStep] = useState<WizardStep>('Applicant Information')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [stepError, setStepError] = useState<string | null>(null)
   const [result, setResult] = useState<{ referenceNumber: string; applicantName: string; amountRequested: number } | null>(null)
 
   const [applicant, setApplicant] = useState<ApplicantForm>({
@@ -125,10 +126,40 @@ function NewLoanApplication() {
 
   const stepIndex = STEPS.indexOf(step)
 
+  function validateApplicantStep(): string | null {
+    if (applicant.mode === 'existing') {
+      if (!applicant.customerId) return 'Select a customer'
+    } else {
+      if (!applicant.firstName.trim()) return 'First name is required'
+      if (!applicant.lastName.trim()) return 'Last name is required'
+      if (!applicant.applicantPhone.trim()) return 'Phone number is required'
+      if (!applicant.employmentType) return 'Select an employment type'
+      if (applicant.employmentType === 'self_employed' ? !applicant.businessName.trim() : !applicant.employerName.trim()) {
+        return applicant.employmentType === 'self_employed' ? 'Business name is required' : 'Employer name is required'
+      }
+    }
+    if (!applicant.guarantorName.trim()) return 'Guarantor name is required'
+    if (!applicant.guarantorPhone.trim()) return 'Guarantor phone number is required'
+    return null
+  }
+
+  function validateLoanDetailsStep(): string | null {
+    if (!loan.loanType) return 'Select a loan type'
+    if (!(Number(loan.amountRequested) > 0)) return 'Enter a valid loan amount'
+    return null
+  }
+
   function goNext() {
+    const validationError = step === 'Applicant Information' ? validateApplicantStep() : step === 'Loan Details' ? validateLoanDetailsStep() : null
+    if (validationError) {
+      setStepError(validationError)
+      return
+    }
+    setStepError(null)
     if (stepIndex < STEPS.length - 1) setStep(STEPS[stepIndex + 1])
   }
   function goBack() {
+    setStepError(null)
     if (stepIndex > 0) setStep(STEPS[stepIndex - 1])
   }
 
@@ -321,6 +352,8 @@ function NewLoanApplication() {
                   </Field>
                 </div>
               </Section>
+
+              {stepError && <p className="text-sm text-destructive">{stepError}</p>}
             </div>
           )}
 
@@ -375,6 +408,8 @@ function NewLoanApplication() {
                   <Stat label="Total Amount Due" value={formatNaira(totalDue)} />
                 </div>
               </div>
+
+              {stepError && <p className="text-sm text-destructive">{stepError}</p>}
             </div>
           )}
 
