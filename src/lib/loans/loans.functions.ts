@@ -650,18 +650,28 @@ export const runBankAnalysisFn = createServerFn({ method: 'POST' })
     }
 
     const { extractStatementText, analyzeStatementText } = await import('#/lib/loans/bank-analysis-ai.server')
+    const extractionErrors: string[] = []
     const texts = await Promise.all(
       bankStatements.map(async (doc) => {
         if (!doc.dataUrl) return ''
         try {
           return await extractStatementText(doc.dataUrl)
-        } catch {
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err)
+          console.error(`Failed to extract text from bank statement "${doc.fileName}"`, err)
+          extractionErrors.push(`${doc.fileName}: ${message}`)
           return ''
         }
       }),
     )
     const combinedText = texts.filter(Boolean).join('\n\n---\n\n')
-    if (!combinedText.trim()) throw new Error('Could not read any of the uploaded bank statements')
+    if (!combinedText.trim()) {
+      throw new Error(
+        extractionErrors.length > 0
+          ? `Could not read the uploaded bank statement(s): ${extractionErrors.join('; ')}`
+          : 'Could not read any of the uploaded bank statements',
+      )
+    }
 
     const result = await analyzeStatementText(combinedText)
 
