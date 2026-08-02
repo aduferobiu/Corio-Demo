@@ -1,8 +1,22 @@
+import { DOMMatrix, DOMPoint, DOMRect, ImageData, Path2D } from '@napi-rs/canvas'
 import OpenAI from 'openai'
 import { zodResponseFormat } from 'openai/helpers/zod'
 import { PDFParse } from 'pdf-parse'
 
 import { bankAnalysisSchema, type BankAnalysisResult } from '#/lib/loans/bank-analysis'
+
+// pdfjs-dist (used internally by pdf-parse) assumes it's running in a browser and calls
+// `new DOMMatrix(...)` / `new Path2D(...)` etc. as bare globals for glyph-path and image
+// transforms. Installing @napi-rs/canvas alone doesn't provide these — it only exports the
+// classes, it doesn't register them on globalThis — so any statement whose content stream
+// exercises those code paths (most real-world PDFs, unlike simple text-only ones) throws
+// "DOMMatrix is not defined". Registering them here, once, before any PDF is parsed, fixes it.
+const webPlatformPolyfills = { DOMMatrix, DOMPoint, DOMRect, ImageData, Path2D }
+for (const [name, ctor] of Object.entries(webPlatformPolyfills)) {
+  if (!(name in globalThis)) {
+    ;(globalThis as Record<string, unknown>)[name] = ctor
+  }
+}
 
 const SYSTEM_PROMPT = `You are a credit risk analyst at a Nigerian microfinance bank, reviewing a customer's bank statement (extracted as plain text from a PDF) as part of a loan application review.
 
