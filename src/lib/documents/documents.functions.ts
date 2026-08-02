@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { db } from '#/db/client'
 import { companyDocumentActivity, companyDocumentVersions, companyDocuments, users } from '#/db/schema'
 import { authMiddleware, requireRole } from '#/lib/auth/middleware'
+import { MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_LABEL } from '#/lib/documents/limits'
 
 async function notifyApprovers(documentName: string, requestedByName: string) {
   const { createNotification } = await import('#/lib/notifications/create-notification.server')
@@ -104,6 +105,7 @@ export const createCompanyDocumentFn = createServerFn({ method: 'POST' })
     const file = formData.get('file')
     if (typeof name !== 'string' || !name.trim()) throw new Error('Document name is required')
     if (!(file instanceof File) || file.size === 0) throw new Error('A file is required')
+    if (file.size > MAX_FILE_SIZE_BYTES) throw new Error(`File is too large. Maximum size is ${MAX_FILE_SIZE_LABEL}.`)
     const parsedFolder = FOLDERS.includes(folder as (typeof FOLDERS)[number]) ? (folder as (typeof FOLDERS)[number]) : 'general'
     return { name: name.trim(), folder: parsedFolder, file }
   })
@@ -168,6 +170,7 @@ export const uploadNewVersionFn = createServerFn({ method: 'POST' })
     const file = formData.get('file')
     if (typeof documentId !== 'string') throw new Error('Invalid document')
     if (!(file instanceof File) || file.size === 0) throw new Error('A file is required')
+    if (file.size > MAX_FILE_SIZE_BYTES) throw new Error(`File is too large. Maximum size is ${MAX_FILE_SIZE_LABEL}.`)
     return { documentId, file }
   })
   .handler(async ({ context, data }) => {

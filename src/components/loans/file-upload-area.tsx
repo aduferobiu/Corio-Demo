@@ -1,5 +1,7 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { FileText, Trash2, UploadCloud } from 'lucide-react'
+
+import { MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_LABEL } from '#/lib/documents/limits'
 
 function formatFileSize(bytes: number) {
   if (bytes < 1024) return `${bytes}b`
@@ -16,6 +18,7 @@ export function FileUploadArea({
   onRemove: () => void
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
+  const [error, setError] = useState<string | null>(null)
 
   if (file) {
     return (
@@ -37,28 +40,38 @@ export function FileUploadArea({
   }
 
   return (
-    <button
-      type="button"
-      onClick={() => inputRef.current?.click()}
-      className="flex w-full flex-col items-center justify-center gap-5 rounded-xl border border-dashed border-[var(--corio-neutral-300)] bg-white p-5 text-center"
-    >
-      <input
-        ref={inputRef}
-        type="file"
-        className="hidden"
-        accept="image/jpeg,image/png,application/pdf,video/mp4"
-        onChange={(e) => {
-          const selected = e.target.files?.[0]
-          if (selected) onSelect(selected)
-        }}
-      />
-      <div className="flex items-center gap-5">
-        <UploadCloud className="size-6 shrink-0 text-[var(--corio-neutral-400)]" />
-        <div className="flex flex-col gap-1 text-left">
-          <p className="text-sm font-medium text-[var(--corio-neutral-900)]">Upload Document</p>
-          <p className="text-xs text-[var(--corio-neutral-400)]">JPEG, PNG, PDF, and MP4 formats, up to 50 MB.</p>
+    <div className="flex w-full flex-col gap-2">
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        className="flex w-full flex-col items-center justify-center gap-5 rounded-xl border border-dashed border-[var(--corio-neutral-300)] bg-white p-5 text-center"
+      >
+        <input
+          ref={inputRef}
+          type="file"
+          className="hidden"
+          accept="image/jpeg,image/png,application/pdf,video/mp4"
+          onChange={(e) => {
+            const selected = e.target.files?.[0]
+            e.target.value = ''
+            if (!selected) return
+            if (selected.size > MAX_FILE_SIZE_BYTES) {
+              setError(`"${selected.name}" is too large. Maximum file size is ${MAX_FILE_SIZE_LABEL}.`)
+              return
+            }
+            setError(null)
+            onSelect(selected)
+          }}
+        />
+        <div className="flex items-center gap-5">
+          <UploadCloud className="size-6 shrink-0 text-[var(--corio-neutral-400)]" />
+          <div className="flex flex-col gap-1 text-left">
+            <p className="text-sm font-medium text-[var(--corio-neutral-900)]">Upload Document</p>
+            <p className="text-xs text-[var(--corio-neutral-400)]">JPEG, PNG, PDF, and MP4 formats, up to {MAX_FILE_SIZE_LABEL}.</p>
+          </div>
         </div>
-      </div>
-    </button>
+      </button>
+      {error && <p className="text-xs text-destructive">{error}</p>}
+    </div>
   )
 }

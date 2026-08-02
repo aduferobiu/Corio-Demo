@@ -6,6 +6,7 @@ import { db } from '#/db/client'
 import { comments, customers, documents, loanApplications, loanStatusHistory, notifications, users } from '#/db/schema'
 import { authMiddleware, requireRole } from '#/lib/auth/middleware'
 import { ROLE_APPLICATION_DETAIL } from '#/lib/auth/role-routes'
+import { MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_LABEL } from '#/lib/documents/limits'
 import { ATTACHMENT_TYPES } from '#/lib/loans/attachment-types'
 
 function generateReferenceNumber() {
@@ -138,18 +139,19 @@ const applicantSchema = z.object({
   totalAmountDue: z.coerce.number().int().nonnegative(),
 })
 
+// Files are uploaded separately (via uploadAttachmentFn/uploadBankStatementFn) once the
+// application exists, rather than bundled into this request — a submission with several
+// scanned documents can otherwise exceed serverless request-body limits.
 export const createApplicationFn = createServerFn({ method: 'POST' })
   .middleware([requireRole('loan_officer', 'admin')])
   .validator((formData: unknown) => {
     if (!(formData instanceof FormData)) throw new Error('Expected FormData')
     const raw = Object.fromEntries(formData.entries())
     const fields = applicantSchema.parse(raw)
-    const files = formData.getAll('files') as File[]
-    const fileLabels = formData.getAll('fileLabels') as string[]
-    return { fields, files, fileLabels }
+    return { fields }
   })
   .handler(async ({ context, data }) => {
-    const { fields, files, fileLabels } = data
+    const { fields } = data
 
     let customerId: string
     let applicantName: string
@@ -235,23 +237,6 @@ export const createApplicationFn = createServerFn({ method: 'POST' })
       actorUserId: context.user.id,
     })
 
-    const { writeUploadedFile, fileToDataUrl } = await import('#/lib/documents/storage.server')
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i]
-      if (!file || file.size === 0) continue
-      const [storedPath, dataUrl] = await Promise.all([writeUploadedFile(application.id, file), fileToDataUrl(file)])
-      await db.insert(documents).values({
-        loanApplicationId: application.id,
-        uploadedByUserId: context.user.id,
-        fileName: file.name,
-        storedPath,
-        dataUrl,
-        mimeType: file.type || 'application/octet-stream',
-        fileSize: file.size,
-        documentType: fileLabels[i] ?? 'other',
-      })
-    }
-
     // Newly submitted applications are first in the branch officer's queue —
     // let them know a task is waiting on them.
     const branchOfficers = await db.select().from(users).where(and(eq(users.role, 'branch_officer'), eq(users.branch, application.branch ?? '')))
@@ -288,6 +273,9 @@ export const postQueryMessageFn = createServerFn({ method: 'POST' })
       throw new Error('Invalid query message')
     }
     const file = formData.get('file')
+    if (file instanceof File && file.size > MAX_FILE_SIZE_BYTES) {
+      throw new Error(`File is too large. Maximum size is ${MAX_FILE_SIZE_LABEL}.`)
+    }
     return { applicationId, body, file: file instanceof File && file.size > 0 ? file : null }
   })
   .handler(async ({ context, data }) => {
@@ -710,6 +698,7 @@ export const uploadBankStatementFn = createServerFn({ method: 'POST' })
     const file = formData.get('file')
     if (typeof applicationId !== 'string') throw new Error('Invalid application')
     if (!(file instanceof File) || file.size === 0) throw new Error('A file is required')
+    if (file.size > MAX_FILE_SIZE_BYTES) throw new Error(`File is too large. Maximum size is ${MAX_FILE_SIZE_LABEL}.`)
     return { applicationId, file }
   })
   .handler(async ({ context, data }) => {
@@ -763,6 +752,7 @@ export const uploadAttachmentFn = createServerFn({ method: 'POST' })
     if (typeof applicationId !== 'string') throw new Error('Invalid application')
     if (!ATTACHMENT_TYPES.includes(documentType as (typeof ATTACHMENT_TYPES)[number])) throw new Error('Invalid document type')
     if (!(file instanceof File) || file.size === 0) throw new Error('A file is required')
+    if (file.size > MAX_FILE_SIZE_BYTES) throw new Error(`File is too large. Maximum size is ${MAX_FILE_SIZE_LABEL}.`)
     return { applicationId, documentType: documentType as string, file }
   })
   .handler(async ({ context, data }) => {

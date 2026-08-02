@@ -15,7 +15,7 @@ import { RadioGroup, RadioGroupItem } from '#/components/ui/radio-group'
 import { Textarea } from '#/components/ui/textarea'
 import { ROLE_LOAN_HOME } from '#/lib/auth/role-routes'
 import { listCustomersFn } from '#/lib/customers/customers.functions'
-import { createApplicationFn } from '#/lib/loans/loans.functions'
+import { createApplicationFn, uploadAttachmentFn, uploadBankStatementFn } from '#/lib/loans/loans.functions'
 
 export const Route = createFileRoute('/_authenticated/loan-officer/new')({
   loader: () => listCustomersFn(),
@@ -68,6 +68,8 @@ function NewLoanApplication() {
   const { user } = Route.useRouteContext()
   const customers = Route.useLoaderData()
   const createApplication = useServerFn(createApplicationFn)
+  const uploadAttachment = useServerFn(uploadAttachmentFn)
+  const uploadBankStatement = useServerFn(uploadBankStatementFn)
 
   const [step, setStep] = useState<WizardStep>('Applicant Information')
   const [submitting, setSubmitting] = useState(false)
@@ -158,22 +160,50 @@ function NewLoanApplication() {
       formData.set('interestRateBps', String(INTEREST_RATE_BPS))
       formData.set('totalAmountDue', String(totalDue))
 
-      const fileEntries: [File, string][] = [
-        [docs.idDocument!, docs.idType],
-        [docs.employmentLetter!, 'Employment Letter'],
-        [docs.payslip!, 'Payslip for the last 10 months'],
-        [docs.bankStatement!, 'Bank Statement'],
-        [docs.collateralDocument!, docs.collateralType],
-      ]
-      for (const [file, label] of fileEntries) {
-        if (file) {
-          formData.append('files', file)
-          formData.append('fileLabels', label)
-        }
-      }
-
       const application = await createApplication({ data: formData })
+
+      // Uploaded as separate requests (rather than bundled into the request above) so a
+      // submission with several scanned documents doesn't exceed serverless body-size limits.
+      const attachmentEntries: [File | null, string][] = [
+        [docs.idDocument, docs.idType],
+        [docs.employmentLetter, 'Employment Letter'],
+        [docs.payslip, 'Payslip for the last 10 months'],
+        [docs.collateralDocument, docs.collateralType],
+      ]
+      const uploadResults = await Promise.allSettled([
+        ...attachmentEntries
+          .filter(([file]) => file)
+          .map(([file, documentType]) => {
+            const attachmentData = new FormData()
+            attachmentData.set('applicationId', application.id)
+            attachmentData.set('documentType', documentType)
+            attachmentData.set('file', file!)
+            return uploadAttachment({ data: attachmentData })
+          }),
+        ...(docs.bankStatement
+          ? [
+              (() => {
+                const bankStatementData = new FormData()
+                bankStatementData.set('applicationId', application.id)
+                bankStatementData.set('file', docs.bankStatement)
+                return uploadBankStatement({ data: bankStatementData })
+              })(),
+            ]
+          : []),
+      ])
+
       setResult({ referenceNumber: application.referenceNumber, applicantName: application.applicantName, amountRequested: application.amountRequested })
+
+      const failedUploads = uploadResults.filter((r) => r.status === 'rejected')
+      if (failedUploads.length > 0) {
+        const reasons = failedUploads.map((r) => (r as PromiseRejectedResult).reason)
+        console.error('Some attachments failed to upload', reasons)
+        setError(
+          failedUploads.length === uploadResults.length
+            ? 'The application was submitted, but the attached documents failed to upload. Please add them from the application page.'
+            : 'The application was submitted, but some attached documents failed to upload. Please add the missing ones from the application page.',
+        )
+      }
     } catch {
       setError('Something went wrong submitting the application. Please try again.')
     } finally {
@@ -433,6 +463,8 @@ function NewLoanApplication() {
                 <p className="text-sm text-[var(--corio-neutral-400)]">Your application has been received and is now pending Branch Manager review.</p>
               </div>
             </div>
+
+            {error && <p className="text-center text-sm text-destructive">{error}</p>}
 
             <div className="flex flex-col gap-5 rounded-2xl bg-[var(--corio-neutral-100)] p-6">
               <Row label="Reference Number:" value={result.referenceNumber} />
